@@ -1,6 +1,34 @@
-// Design Ref: §5.3 — placeholder until the UI is built in module-3
-function App() {
-  return <h1>Todo</h1>;
+// Design Ref: §5.1, §5.3 — page layout and Provider setup.
+import { Footer } from '@/components/Footer';
+import { Header } from '@/components/Header';
+import { TodoInput } from '@/components/TodoInput';
+import { TodoList } from '@/components/TodoList';
+import { TodoProvider } from '@/state/TodoContext';
+import styles from './App.module.css';
+
+interface AppProps {
+  /** Storage for the Provider; tests pass an in-memory one. Defaults to the browser's localStorage. */
+  storage?: Storage | null;
+}
+
+function App({ storage }: AppProps) {
+  return (
+    <TodoProvider storage={storage}>
+      <div className={styles.page}>
+        <main className={styles.main}>
+          <Header />
+          {/* Outer shell + inner core: the card sits in a faint tray (double bezel). */}
+          <div className={styles.shell}>
+            <section className={styles.core} aria-label="할 일">
+              <TodoInput />
+              <TodoList />
+              <Footer />
+            </section>
+          </div>
+        </main>
+      </div>
+    </TodoProvider>
+  );
 }
 
 export default App;

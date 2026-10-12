@@ -1,0 +1,143 @@
+/*
+ * Design Ref: §10.4 — design tokens as CSS variables. Light values on :root, dark values on
+ * [data-theme='dark'] (the toggle arrives with ThemeToggle/useTheme in module-5).
+ *
+ * Look: calm "soft structuralism" — silver-grey canvas, white floating surfaces, hairline
+ * borders and very diffused shadows. Text/background pairs below meet WCAG AA (≥ 4.5:1).
+ */
+:root {
+  color-scheme: light;
+
+  /* Typography — Geist for Latin, Pretendard for Hangul (both self-hosted, see main.tsx) */
+  --font-sans:
+    'Geist Variable', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-md: 0.9375rem;
+  --font-size-lg: 1.0625rem;
+  --font-size-title: 1.75rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+  --tracking-tight: -0.02em;
+
+  /* Canvas and surfaces */
+  --color-bg: #f2f2f0;
+  --color-shell: rgb(20 20 24 / 0.035);
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f6f6f4;
+  --color-surface-hover: rgb(20 20 24 / 0.04);
+  --color-highlight: rgb(255 255 255 / 0.9);
+
+  /* Hairlines (low-alpha instead of solid grey) */
+  --color-border: rgb(20 20 24 / 0.08);
+  --color-border-strong: rgb(20 20 24 / 0.18);
+
+  /* Text — contrast on --color-surface: 17.7 / 7.4 / 5.2 (subtle on sunken/hover ≥ 4.8) */
+  --color-text: #18181b;
+  --color-text-muted: #55555d;
+  --color-text-subtle: #6c6c74;
+
+  /* Accent — #3a46c4 on white 7.4:1, white on accent 7.4:1 */
+  --color-accent: #3a46c4;
+  --color-accent-hover: #2f3aa8;
+  --color-accent-contrast: #ffffff;
+  --color-accent-soft: rgb(58 70 196 / 0.1);
+  --color-focus-ring: rgb(58 70 196 / 0.55);
+
+  /* Status — used for errors and due badges (danger 6.6:1, warning 6.0:1 on white) */
+  --color-danger: #b42318;
+  --color-danger-soft: rgb(180 35 24 / 0.09);
+  --color-warning: #a14a00;
+  --color-warning-soft: rgb(161 74 0 / 0.1);
+
+  /* Radii (concentric: inner = outer - shell padding) */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+  --shell-padding: 6px;
+
+  /* Spacing scale (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Sizes */
+  --touch-target: 40px;
+  --content-max-width: 680px;
+
+  /* Shadows — wide, soft, low-alpha */
+  --shadow-card: 0 1px 2px rgb(20 20 24 / 0.03), 0 24px 48px -24px rgb(20 20 24 / 0.12);
+  --shadow-raised: 0 1px 2px rgb(20 20 24 / 0.06), 0 6px 16px -8px rgb(20 20 24 / 0.16);
+  --shadow-inset-highlight: inset 0 1px 0 var(--color-highlight);
+
+  /* Motion — custom curves, never linear/ease-in-out */
+  --ease-out-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --duration-fast: 140ms;
+  --duration-base: 240ms;
+  --duration-slow: 420ms;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0b0b0d;
+  --color-shell: rgb(255 255 255 / 0.03);
+  --color-surface: #151518;
+  --color-surface-sunken: #1c1c20;
+  --color-surface-hover: rgb(255 255 255 / 0.05);
+  --color-highlight: rgb(255 255 255 / 0.06);
+
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-border-strong: rgb(255 255 255 / 0.2);
+
+  /* contrast on --color-surface: 15.6 / 7.5 / 5.3 (subtle on sunken/hover ≥ 4.7) */
+  --color-text: #ededf0;
+  --color-text-muted: #a5a5ae;
+  --color-text-subtle: #8a8a94;
+
+  /* #8f9bff on surface 7.2:1; dark text on accent 7.8:1 */
+  --color-accent: #8f9bff;
+  --color-accent-hover: #a7b0ff;
+  --color-accent-contrast: #0b0b0d;
+  --color-accent-soft: rgb(143 155 255 / 0.14);
+  --color-focus-ring: rgb(143 155 255 / 0.6);
+
+  /* danger 7.2:1, warning 9.0:1 on surface */
+  --color-danger: #ff7a70;
+  --color-danger-soft: rgb(255 122 112 / 0.12);
+  --color-warning: #f2a65a;
+  --color-warning-soft: rgb(242 166 90 / 0.12);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 24px 48px -24px rgb(0 0 0 / 0.6);
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 16px -8px rgb(0 0 0 / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
