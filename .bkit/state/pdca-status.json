@@ -1,0 +1,108 @@
+{
+  "version": "3.0",
+  "lastUpdated": "2026-10-12T13:10:56.795Z",
+  "activeFeatures": [
+    "todo-app"
+  ],
+  "primaryFeature": "todo-app",
+  "features": {
+    "todo-app": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {
+        "plan": "docs/01-plan/features/todo-app.plan.md",
+        "design": "docs/02-design/features/todo-app.design.md"
+      },
+      "timestamps": {
+        "started": "2026-10-12T12:47:08.843Z",
+        "lastUpdated": "2026-10-12T13:10:56.791Z"
+      },
+      "stateMachine": {
+        "currentState": "plan",
+        "previousState": null,
+        "stateHistory": [],
+        "retryCount": 0,
+        "maxRetries": 5,
+        "circuitBreakerOpen": false
+      },
+      "metrics": {
+        "qualityScore": null,
+        "conventionCompliance": null,
+        "apiCompliance": null,
+        "cycleTimeMs": null,
+        "iterationEfficiency": null
+      },
+      "phaseTimestamps": {},
+      "automationLevel": 2
+    }
+  },
+  "pipeline": {
+    "currentPhase": 1,
+    "level": "Starter",
+    "phaseHistory": []
+  },
+  "session": {
+    "startedAt": "2026-10-12T12:47:08.842Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-10-12T13:10:56.795Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-10-12T12:47:08.846Z",
+      "feature": "todo-app",
+      "phase": "plan",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-10-12T12:52:18.215Z",
+      "feature": "todo-app",
+      "phase": "design",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-10-12T13:10:56.795Z",
+      "feature": "todo-app",
+      "phase": "do",
+      "action": "updated"
+    }
+  ],
+  "taskHistory": [
+    {
+      "taskId": "1",
+      "phase": "plan",
+      "feature": "todo-app",
+      "createdAt": "2026-10-12T12:47:15.754Z"
+    },
+    {
+      "taskId": "2",
+      "phase": "design",
+      "feature": "todo-app",
+      "createdAt": "2026-10-12T12:52:24.355Z"
+    },
+    {
+      "taskId": "3",
+      "phase": "do",
+      "feature": "todo-app",
+      "createdAt": "2026-10-12T13:10:54.059Z"
+    }
+  ],
+  "stateMachine": {
+    "defaultWorkflow": "default",
+    "activeWorkflows": {},
+    "totalTransitions": 0
+  },
+  "automation": {
+    "globalLevel": 2,
+    "trustScore": 38,
+    "pendingApprovals": 0,
+    "lastGateResult": null
+  },
+  "team": {
+    "enabled": true,
+    "stateFile": ".bkit/runtime/agent-state.json",
+    "eventsFile": ".bkit/runtime/agent-events.jsonl"
+  }
+}
