@@ -3,6 +3,8 @@
 import type { DueStatus, Todo } from './todo';
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const ISO_TIMESTAMP_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** Formats a Date as 'YYYY-MM-DD' using the local time zone (not UTC). */
@@ -22,6 +24,11 @@ export function isValidDateString(value: string): boolean {
   return (
     date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
   );
+}
+
+/** True for ISO 8601 date-time strings such as `Date.prototype.toISOString()` produces. */
+export function isIsoTimestamp(value: string): boolean {
+  return ISO_TIMESTAMP_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
 }
 
 /** Whole days from `from` to `to` (both 'YYYY-MM-DD'); negative when `to` is earlier. */

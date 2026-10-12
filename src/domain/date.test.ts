@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { makeTodo } from '@/test/factories';
-import { diffInDays, getDueStatus, isValidDateString, toLocalDateString } from './date';
+import {
+  diffInDays,
+  getDueStatus,
+  isIsoTimestamp,
+  isValidDateString,
+  toLocalDateString,
+} from './date';
 
 const TODAY = '2026-10-12';
 
@@ -61,5 +67,19 @@ describe('diffInDays', () => {
   it('crosses month and year boundaries', () => {
     expect(diffInDays('2026-09-30', '2026-10-01')).toBe(1);
     expect(diffInDays('2025-12-31', '2026-01-01')).toBe(1);
+  });
+});
+
+describe('isIsoTimestamp', () => {
+  it('accepts toISOString output and offsets', () => {
+    expect(isIsoTimestamp('2026-10-12T09:00:00.000Z')).toBe(true);
+    expect(isIsoTimestamp('2026-10-12T09:00:00Z')).toBe(true);
+    expect(isIsoTimestamp('2026-10-12T18:00:00+09:00')).toBe(true);
+  });
+
+  it('rejects dates without time, free text and impossible values', () => {
+    expect(isIsoTimestamp('2026-10-12')).toBe(false);
+    expect(isIsoTimestamp('yesterday')).toBe(false);
+    expect(isIsoTimestamp('2026-13-40T99:00:00.000Z')).toBe(false);
   });
 });
