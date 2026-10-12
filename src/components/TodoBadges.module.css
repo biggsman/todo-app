@@ -1,0 +1,91 @@
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  height: var(--badge-height);
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+/* Priority: 높음 = accent, 보통 = neutral hairline, 낮음 = quiet text only. */
+.priority {
+  border: 1px solid var(--color-border);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+.priority[data-priority='high'] {
+  border-color: transparent;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.priority[data-priority='low'] {
+  border-color: transparent;
+  color: var(--color-text-subtle);
+}
+
+.priority[data-priority='low'] .dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+/* Due: overdue = danger, today = warning, upcoming = neutral, completed = quiet. */
+.due {
+  border: 1px solid var(--color-border);
+}
+
+.due[data-tone='overdue'] {
+  border-color: transparent;
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.due[data-tone='today'] {
+  border-color: transparent;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.due[data-tone='muted'] {
+  border-color: transparent;
+  color: var(--color-text-subtle);
+}
+
+.category {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.tag {
+  padding: 0 2px;
+  color: var(--color-text-subtle);
+}

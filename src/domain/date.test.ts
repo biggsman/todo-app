@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { makeTodo } from '@/test/factories';
 import {
   diffInDays,
+  formatShortDate,
   getDueStatus,
   isIsoTimestamp,
   isValidDateString,
@@ -81,5 +82,15 @@ describe('isIsoTimestamp', () => {
     expect(isIsoTimestamp('2026-10-12')).toBe(false);
     expect(isIsoTimestamp('yesterday')).toBe(false);
     expect(isIsoTimestamp('2026-13-40T99:00:00.000Z')).toBe(false);
+  });
+});
+
+describe('formatShortDate', () => {
+  it('drops the year and zero padding within the same year', () => {
+    expect(formatShortDate('2026-10-04', '2026-10-12')).toBe('10/4');
+  });
+
+  it('keeps the year for another year', () => {
+    expect(formatShortDate('2027-01-05', '2026-10-12')).toBe('2027/1/5');
   });
 });

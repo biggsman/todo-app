@@ -1,6 +1,6 @@
 .item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-1);
   min-height: 56px;
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-1);
@@ -16,6 +16,16 @@
 .item:hover,
 .item:focus-within {
   background: var(--color-surface-hover);
+}
+
+.editing,
+.editing:hover,
+.editing:focus-within {
+  margin-block: var(--space-1);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    var(--shadow-raised);
 }
 
 @keyframes item-enter {
@@ -88,9 +98,14 @@
   transform: scale(1);
 }
 
-.title {
+.body {
   flex: 1;
   min-width: 0;
+}
+
+.title {
+  display: block;
+  width: 100%;
   min-height: var(--touch-target);
   padding: var(--space-2) var(--space-2);
   border: 0;

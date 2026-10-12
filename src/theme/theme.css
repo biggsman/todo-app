@@ -29,6 +29,7 @@
   --color-shell: rgb(20 20 24 / 0.035);
   --color-surface: #ffffff;
   --color-surface-sunken: #f6f6f4;
+  --color-surface-raised: #ffffff;
   --color-surface-hover: rgb(20 20 24 / 0.04);
   --color-highlight: rgb(255 255 255 / 0.9);
 
@@ -76,6 +77,8 @@
 
   /* Sizes */
   --touch-target: 40px;
+  --control-height-sm: 32px;
+  --badge-height: 22px;
   --content-max-width: 680px;
 
   /* Shadows — wide, soft, low-alpha */
@@ -98,6 +101,7 @@
   --color-shell: rgb(255 255 255 / 0.03);
   --color-surface: #151518;
   --color-surface-sunken: #1c1c20;
+  --color-surface-raised: #2a2a30;
   --color-surface-hover: rgb(255 255 255 / 0.05);
   --color-highlight: rgb(255 255 255 / 0.06);
 

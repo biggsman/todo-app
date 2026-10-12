@@ -11,3 +11,34 @@
   font-size: var(--font-size-md);
   text-align: center;
 }
+
+.emptyText {
+  margin: 0;
+}
+
+.resetButton {
+  min-height: var(--touch-target);
+  margin-top: var(--space-4);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-inset-highlight);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft),
+    transform var(--duration-fast) var(--ease-out-soft);
+}
+
+.resetButton:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.resetButton:active {
+  transform: scale(0.98);
+}

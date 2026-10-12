@@ -1,19 +1,22 @@
-// Design Ref: §5.2, §5.3, §5.4 — one todo row: completion checkbox, title, edit and delete.
+// Design Ref: §5.2, §5.3, §5.4 — one todo row: completion checkbox, title with badges, edit and delete.
 // Clicking the title (or Enter while it is focused) switches the row to the inline editor.
 import { useEffect, useRef, useState } from 'react';
 import { useTodoActions } from '@/state/TodoContext';
 import { CheckIcon } from './icons/CheckIcon';
 import { PencilIcon } from './icons/PencilIcon';
 import { TrashIcon } from './icons/TrashIcon';
+import { TodoBadges } from './TodoBadges';
 import { TodoEditor } from './TodoEditor';
 import type { Todo } from '@/domain/todo';
 import styles from './TodoItem.module.css';
 
 interface TodoItemProps {
   todo: Todo;
+  /** Local 'YYYY-MM-DD' for due badges; the list computes it once per render. */
+  today: string;
 }
 
-export function TodoItem({ todo }: TodoItemProps) {
+export function TodoItem({ todo, today }: TodoItemProps) {
   const { toggle, remove } = useTodoActions();
   const [isEditing, setIsEditing] = useState(false);
   const titleRef = useRef<HTMLButtonElement>(null);
@@ -33,7 +36,7 @@ export function TodoItem({ todo }: TodoItemProps) {
 
   if (isEditing) {
     return (
-      <li className={styles.item}>
+      <li className={`${styles.item} ${styles.editing}`}>
         <TodoEditor todo={todo} onDone={closeEditor} />
       </li>
     );
@@ -54,14 +57,17 @@ export function TodoItem({ todo }: TodoItemProps) {
         />
         <CheckIcon className={styles.checkMark} />
       </span>
-      <button
-        ref={titleRef}
-        type="button"
-        className={styles.title}
-        onClick={() => setIsEditing(true)}
-      >
-        {todo.title}
-      </button>
+      <div className={styles.body}>
+        <button
+          ref={titleRef}
+          type="button"
+          className={styles.title}
+          onClick={() => setIsEditing(true)}
+        >
+          {todo.title}
+        </button>
+        <TodoBadges todo={todo} today={today} />
+      </div>
       <div className={styles.actions}>
         <button
           type="button"

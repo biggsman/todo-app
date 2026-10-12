@@ -94,6 +94,77 @@
   font-size: var(--font-size-sm);
 }
 
+/* "세부 옵션" disclosure: a quiet text pill under the title row. */
+.disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-target);
+  margin-top: var(--space-1);
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft);
+}
+
+.disclosure:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.disclosureIcon {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+.disclosure[aria-expanded='true'] .disclosureIcon {
+  transform: rotate(0deg);
+}
+
+.disclosureCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel {
+  padding: var(--space-2) var(--space-1) var(--space-1);
+  animation: panel-enter var(--duration-slow) var(--ease-out-soft);
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 480px) {
   .addButton {
     padding-right: var(--space-1);

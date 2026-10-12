@@ -36,6 +36,16 @@ export function diffInDays(from: string, to: string): number {
   return Math.round((toUtcMidnight(to) - toUtcMidnight(from)) / MS_PER_DAY);
 }
 
+/**
+ * Short display form of a 'YYYY-MM-DD' date: 'M/D' within the same year as `today`,
+ * otherwise 'YYYY/M/D'.
+ */
+export function formatShortDate(value: string, today: string): string {
+  const [year, month, day] = value.split('-').map(Number);
+  const monthDay = `${month}/${day}`;
+  return value.slice(0, 4) === today.slice(0, 4) ? monthDay : `${year}/${monthDay}`;
+}
+
 export function getDueStatus(todo: Todo, today: string): DueStatus {
   // Plan SC: FR-06 — completed todos and todos without a due date get no due highlight
   if (todo.completed || todo.dueDate === null) return 'none';

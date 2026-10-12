@@ -1,0 +1,136 @@
+.field {
+  min-width: 0;
+}
+
+/* Looks like one text field; chips and the draft input wrap inside it. */
+.box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--touch-target);
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  transition:
+    border-color var(--duration-fast) var(--ease-out-soft),
+    box-shadow var(--duration-fast) var(--ease-out-soft);
+}
+
+.box:focus-within {
+  border-color: var(--color-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.box[data-invalid] {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-soft);
+}
+
+/* `display: contents` lets the chips wrap together with the input as one flow. */
+.chips {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  height: var(--control-height-sm);
+  padding-left: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-inset-highlight);
+  font-size: var(--font-size-sm);
+  animation: chip-enter var(--duration-base) var(--ease-spring);
+}
+
+@keyframes chip-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chipText {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 28px visible circle; the ::after extends the hit area to the 40px touch target. */
+.remove {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft),
+    transform var(--duration-fast) var(--ease-out-soft);
+}
+
+.remove::after {
+  position: absolute;
+  inset: -6px;
+  content: '';
+}
+
+.remove:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.remove:active {
+  transform: scale(0.92);
+}
+
+.removeIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.input {
+  flex: 1 1 8rem;
+  min-width: 6rem;
+  height: var(--control-height-sm);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  font-size: var(--font-size-md);
+}
+
+.input::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.input:focus-visible {
+  outline: none;
+}
+
+.error {
+  margin: var(--space-1) var(--space-1) 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
