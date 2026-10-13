@@ -71,3 +71,10 @@ e2e/           Playwright 시나리오 (설계 §8.4)
 - 계획 (요구사항 FR-01~14, 성공 기준): [`docs/01-plan/features/todo-app.plan.md`](docs/01-plan/features/todo-app.plan.md)
 - 설계 (인터페이스, 오류 코드, 테스트 계획): [`docs/02-design/features/todo-app.design.md`](docs/02-design/features/todo-app.design.md)
 - 개발 규칙: [`CLAUDE.md`](CLAUDE.md)
+
+## 배포 / 설치
+
+- 주소: https://biggsman.github.io/todo-app/ (`master`에 push하면 GitHub Actions가 자동 배포)
+- 휴대폰: 주소를 연 뒤 브라우저 메뉴에서 **홈 화면에 추가** (iOS Safari: 공유 → 홈 화면에 추가)
+- PC (Chrome/Edge): 주소창 오른쪽의 **설치** 아이콘
+- 한 번 연 뒤에는 인터넷 없이도 열린다 (PWA). 데이터는 기기·브라우저마다 따로 저장되므로, 기기 간 이동은 데이터 메뉴의 내보내기/가져오기를 쓴다.

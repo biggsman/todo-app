@@ -303,3 +303,32 @@ test.describe('§8.4 E2E', () => {
     });
   });
 });
+
+// Installable PWA: manifest + service worker, and the app still opens offline.
+test('PWA: manifest is served and the app opens offline after the first visit', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/');
+  const manifest = await page.evaluate(async () => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    return link
+      ? ((await (await fetch(link.href)).json()) as { name: string; icons: unknown[] })
+      : null;
+  });
+  expect(manifest?.name).toBe('Todo');
+  expect(manifest?.icons.length).toBeGreaterThanOrEqual(3);
+
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload(); // the page is now controlled by the service worker
+  await page.getByPlaceholder(PLACEHOLDER).fill('오프라인 전에 추가');
+  await page.getByPlaceholder(PLACEHOLDER).press('Enter');
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByPlaceholder(PLACEHOLDER)).toBeVisible();
+  await expect(todoList(page)).toContainText('오프라인 전에 추가');
+  await context.setOffline(false);
+});
