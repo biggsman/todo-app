@@ -1,7 +1,7 @@
 // Design Ref: §3.2, §5.3, §10.4 — view state for FilterBar/TodoList (query + sort key) and the
 // derived visible list. It is UI-only and session-scoped, so it lives next to the components
 // instead of in state/ (which holds the persisted todos) and is never saved.
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { collectCategories, collectTags, filterTodos } from '@/domain/filter';
 import { sortTodos } from '@/domain/sort';
 import type { SortKey, Todo, TodoQuery } from '@/domain/todo';
@@ -41,10 +41,17 @@ export function useTodoView(todos: Todo[]): TodoView {
     });
   }
 
+  // Plan NFR Performance: the list follows deferred copies of the query and sort key. The search
+  // box and filter buttons repaint at once; React renders the (up to 1,000-row) list right after
+  // at background priority and drops that work if the next keystroke arrives first. Todo changes
+  // (add, toggle, delete) are not deferred.
+  const listQuery = useDeferredValue(query);
+  const listSortKey = useDeferredValue(sortKey);
+
   // Plan SC: FR-08/09/10 — the visible list is derived with useMemo, never stored
   const visibleTodos = useMemo(
-    () => sortTodos(filterTodos(todos, query), sortKey),
-    [todos, query, sortKey],
+    () => sortTodos(filterTodos(todos, listQuery), listSortKey),
+    [todos, listQuery, listSortKey],
   );
 
   return {

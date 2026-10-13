@@ -1,6 +1,8 @@
 // Design Ref: §5.2, §5.3, §5.4 — one todo row: completion checkbox, title with badges, edit and delete.
 // Clicking the title (or Enter while it is focused) switches the row to the inline editor.
-import { useEffect, useRef, useState } from 'react';
+// Plan NFR Performance: memoized — with stable actions (TodoContext) and an unchanged todo object
+// a row skips re-rendering, so toggling one of 1,000 todos renders one row instead of all.
+import { memo, useEffect, useRef, useState } from 'react';
 import { useTodoActions } from '@/state/TodoContext';
 import { CheckIcon } from './icons/CheckIcon';
 import { PencilIcon } from './icons/PencilIcon';
@@ -16,11 +18,19 @@ interface TodoItemProps {
   todo: Todo;
   /** Local 'YYYY-MM-DD' for due badges; the list computes it once per render. */
   today: string;
+  /** Play the entry animation; read once when the row mounts (see TodoList). */
+  animateEntry?: boolean;
 }
 
-export function TodoItem({ todo, today }: TodoItemProps) {
+export const TodoItem = memo(function TodoItem({
+  todo,
+  today,
+  animateEntry = false,
+}: TodoItemProps) {
   const { toggle, remove } = useTodoActions();
   const [isEditing, setIsEditing] = useState(false);
+  // Fixed at mount: the class must not drop mid-animation when the list re-renders.
+  const [entryClassName] = useState(animateEntry ? ` ${styles.entering}` : '');
   const rowRef = useRef<HTMLLIElement>(null);
   const titleRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef(false);
@@ -49,13 +59,13 @@ export function TodoItem({ todo, today }: TodoItemProps) {
 
   if (isEditing) {
     return (
-      <li className={`${styles.item} ${styles.editing}`} data-todo-id={todo.id}>
+      <li className={`${styles.item} ${styles.editing}${entryClassName}`} data-todo-id={todo.id}>
         <TodoEditor todo={todo} onDone={closeEditor} />
       </li>
     );
   }
 
-  const itemClassName = todo.completed ? `${styles.item} ${styles.completed}` : styles.item;
+  const itemClassName = `${styles.item}${todo.completed ? ` ${styles.completed}` : ''}${entryClassName}`;
 
   return (
     <li ref={rowRef} className={itemClassName} data-todo-id={todo.id}>
@@ -102,4 +112,4 @@ export function TodoItem({ todo, today }: TodoItemProps) {
       </div>
     </li>
   );
-}
+});

@@ -1,7 +1,19 @@
 // Design Ref: §2.2, §4.1, §9.4 — Provider that loads todos once, auto-saves every change, and
 // exposes validated actions. The clock (new Date) and ids (crypto.randomUUID) live here so the
 // domain and reducer stay pure.
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+// Plan NFR Performance (< 100ms with 1,000 todos): the actions object keeps one identity for the
+// Provider's lifetime (it reads the latest todos through a ref), so memoized rows do not re-render
+// when an unrelated todo changes.
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { ok } from '@/domain/errors';
 import { createTodo, updateTodo } from '@/domain/todo';
 import { backupBeforeImport, exportTodos, parseImportFile } from '@/storage/backup';
@@ -101,6 +113,12 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
   }, [storage, state.todos]);
 
   const { todos } = state;
+  // Latest committed list for the actions below. Updated in a layout effect (refs are not written
+  // during render), i.e. before any event handler can call an action on the new list.
+  const todosRef = useRef(todos);
+  useLayoutEffect(() => {
+    todosRef.current = todos;
+  }, [todos]);
 
   const actions = useMemo<TodoActions>(
     () => ({
@@ -110,7 +128,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         return created;
       },
       update(id, patch) {
-        const current = todos.find((todo) => todo.id === id);
+        const current = todosRef.current.find((todo) => todo.id === id);
         if (!current) return ok(undefined);
         const updated = updateTodo(current, patch, new Date());
         if (!updated.ok) return updated;
@@ -121,6 +139,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         dispatch({ type: 'toggle', id, now: new Date().toISOString() });
       },
       remove(id) {
+        const todos = todosRef.current;
         const index = todos.findIndex((todo) => todo.id === id);
         if (index === -1) return;
         dispatch({ type: 'remove', id });
@@ -129,7 +148,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         setUndoReason('remove');
       },
       clearCompleted() {
-        const removed = todos
+        const removed = todosRef.current
           .map((todo, index) => ({ todo, index }))
           .filter(({ todo }) => todo.completed);
         if (removed.length === 0) return;
@@ -138,7 +157,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         setUndoReason('clearCompleted');
       },
       exportFile() {
-        return exportTodos(todos, new Date());
+        return exportTodos(todosRef.current, new Date());
       },
       parseImport(text) {
         return parseImportFile(text);
@@ -148,7 +167,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         // failed backup cancels the import. Without storage there is nothing persisted to protect
         // (the app runs in memory only), so the confirmed import goes ahead.
         if (storage) {
-          const backup = backupBeforeImport(storage, todos);
+          const backup = backupBeforeImport(storage, todosRef.current);
           if (!backup.ok) return backup;
         }
         dispatch({ type: 'replaceAll', todos: imported });
@@ -164,7 +183,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
       pauseUndo: pause,
       resumeUndo: resume,
     }),
-    [todos, storage, offer, undo, dismiss, pause, resume],
+    [storage, offer, undo, dismiss, pause, resume],
   );
 
   const value = useMemo<TodosValue>(

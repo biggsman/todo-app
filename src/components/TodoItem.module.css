@@ -6,7 +6,23 @@
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-1);
   border-radius: var(--radius-md);
   transition: background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+/* Only rows that were just added or restored (see TodoList); filtering never replays it. */
+.entering {
   animation: item-enter var(--duration-slow) var(--ease-out-soft);
+}
+
+/*
+ * Plan NFR Performance: rows outside the viewport skip style, layout and paint, so a 1,000-item
+ * list reflows only what is on screen. `auto` remembers each row's last rendered height (78px is
+ * the usual one-badge-line row) so the scrollbar stays steady. Paint containment clips at the
+ * padding box; the 4px padding above exactly fits the 2px + 2px focus ring of the row's buttons.
+ * The inline editor is left out so nothing it shows is ever clipped.
+ */
+.item:not(.editing) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 78px;
 }
 
 .item + .item {
