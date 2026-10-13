@@ -1,0 +1,147 @@
+/* A floating stack at the bottom centre; it never blocks clicks outside its own toasts. */
+.region {
+  position: fixed;
+  bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(440px, calc(100% - var(--space-6)));
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-toast-bg);
+  color: var(--color-toast-text);
+  box-shadow:
+    0 0 0 1px var(--color-toast-border),
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    var(--shadow-raised),
+    0 24px 48px -20px rgb(20 20 24 / 0.28);
+  pointer-events: auto;
+  animation: toast-enter var(--duration-slow) var(--ease-out-soft);
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.toast[data-tone='error'] .icon {
+  color: var(--color-toast-danger);
+}
+
+.toast[data-tone='success'] .icon {
+  color: var(--color-toast-success);
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-block: var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+/* "되돌리기" pill with its icon in a nested circle (button-in-button). */
+.undoButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-toast-action);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    transform var(--duration-fast) var(--ease-out-soft);
+}
+
+.undoButton:hover {
+  background: var(--color-toast-hover);
+}
+
+.undoButton:active {
+  transform: scale(0.98);
+}
+
+.undoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  background: var(--color-toast-hover);
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.undoIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.undoButton:hover .undoIcon {
+  transform: rotate(-20deg) scale(1.05);
+}
+
+.closeButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-toast-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft);
+}
+
+.closeButton:hover {
+  background: var(--color-toast-hover);
+  color: var(--color-toast-text);
+}
+
+.closeButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.undoButton:focus-visible,
+.closeButton:focus-visible {
+  outline-color: var(--color-toast-action);
+}

@@ -45,16 +45,32 @@ describe('sortTodos("dueDate") (§8.2 #6)', () => {
     ]);
   });
 
-  it('orders the fixture by due date', () => {
+  it('orders the fixture by due date, completed todos last', () => {
     expect(ids(sortTodos(makeFixtureTodos(), 'dueDate'))).toEqual([
-      'fixture-8', // 10-01
-      'fixture-7', // 10-10
       'fixture-1', // 10-11
       'fixture-2', // 10-12
       'fixture-3', // 10-14
       'fixture-5', // 10-20
       'fixture-6', // none, newer
       'fixture-4', // none, older
+      'fixture-8', // completed, 10-01
+      'fixture-7', // completed, 10-10
+    ]);
+  });
+
+  it('puts completed todos after open ones, even with an earlier due date (v0.2)', () => {
+    const todos = [
+      makeTodo({ id: 'done-early', dueDate: '2026-10-01', completed: true }),
+      makeTodo({ id: 'open-none', dueDate: null }),
+      makeTodo({ id: 'open-late', dueDate: '2026-10-20' }),
+      makeTodo({ id: 'done-none', dueDate: null, completed: true }),
+    ];
+
+    expect(ids(sortTodos(todos, 'dueDate'))).toEqual([
+      'open-late',
+      'open-none',
+      'done-early',
+      'done-none',
     ]);
   });
 });
@@ -80,6 +96,22 @@ describe('sortTodos("priority") (§8.2 #7)', () => {
     expect(ids(sortTodos(todos, 'priority'))).toEqual(['high-new', 'high-old', 'low']);
   });
 
+  it('puts completed todos after open ones, each group by priority (v0.2)', () => {
+    const todos = [
+      makeTodo({ id: 'done-high', priority: 'high', completed: true }),
+      makeTodo({ id: 'open-low', priority: 'low' }),
+      makeTodo({ id: 'done-low', priority: 'low', completed: true }),
+      makeTodo({ id: 'open-high', priority: 'high' }),
+    ];
+
+    expect(ids(sortTodos(todos, 'priority'))).toEqual([
+      'open-high',
+      'open-low',
+      'done-high',
+      'done-low',
+    ]);
+  });
+
   it('is stable when priority and createdAt are both equal', () => {
     const todos = ['a', 'b', 'c', 'd'].map((id) =>
       makeTodo({ id, priority: 'medium', createdAt: at(0) }),
@@ -98,6 +130,16 @@ describe('sortTodos("createdAt")', () => {
     ];
 
     expect(ids(sortTodos(todos, 'createdAt'))).toEqual(['new', 'mid', 'old']);
+  });
+
+  it('ignores completion: 최신순 is purely by createdAt (v0.2)', () => {
+    const todos = [
+      makeTodo({ id: 'open-old', createdAt: at(1) }),
+      makeTodo({ id: 'done-new', createdAt: at(3), completed: true }),
+      makeTodo({ id: 'open-mid', createdAt: at(2) }),
+    ];
+
+    expect(ids(sortTodos(todos, 'createdAt'))).toEqual(['done-new', 'open-mid', 'open-old']);
   });
 });
 

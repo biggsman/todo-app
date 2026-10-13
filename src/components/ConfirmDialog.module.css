@@ -1,0 +1,140 @@
+/* Outer shell (the <dialog> itself) + inner core: the double bezel used for the main card. */
+.dialog {
+  width: min(420px, calc(100% - var(--space-6)));
+  max-width: none;
+  padding: var(--shell-padding);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  color: var(--color-text);
+  box-shadow: 0 32px 64px -24px rgb(20 20 24 / 0.35);
+  animation: dialog-enter var(--duration-slow) var(--ease-out-soft);
+}
+
+.dialog::backdrop {
+  background: var(--color-backdrop);
+  backdrop-filter: blur(6px);
+  animation: backdrop-enter var(--duration-base) var(--ease-out-soft);
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes backdrop-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.core {
+  padding: var(--space-6);
+  border-radius: calc(var(--radius-xl) - var(--shell-padding));
+  background: var(--color-surface);
+  box-shadow: var(--shadow-inset-highlight);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.message {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-md);
+}
+
+.detail {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.cancel,
+.confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-target);
+  border-radius: var(--radius-pill);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    transform var(--duration-fast) var(--ease-out-soft);
+}
+
+.cancel {
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.cancel:hover {
+  background: var(--color-surface-hover);
+}
+
+.confirm {
+  padding: 0 var(--space-1) 0 var(--space-4);
+  border: 0;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.confirm:hover {
+  background: var(--color-accent-hover);
+}
+
+.cancel:active,
+.confirm:active {
+  transform: scale(0.98);
+}
+
+.confirmIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-accent-contrast) 16%, transparent);
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.confirm:hover .confirmIcon {
+  transform: translateY(-1px) scale(1.05);
+}
+
+@media (max-width: 480px) {
+  .core {
+    padding: var(--space-5);
+  }
+
+  .actions > * {
+    flex: 1;
+    justify-content: center;
+  }
+}

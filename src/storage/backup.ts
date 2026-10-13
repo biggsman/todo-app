@@ -1,6 +1,7 @@
 // Design Ref: §3.3, §4.2, §7 — JSON export/import file format and the pre-import safety backup.
 import { toLocalDateString } from '@/domain/date';
-import { fail, makeError } from '@/domain/errors';
+import { fail, makeError, ok } from '@/domain/errors';
+import { MAX_IMPORT_BYTES } from '@/domain/importFile';
 import {
   CURRENT_SCHEMA_VERSION,
   PRE_IMPORT_BACKUP_KEY,
@@ -10,8 +11,6 @@ import {
 import type { Result, Todo } from '@/domain/todo';
 
 export const EXPORT_APP_ID = 'todo-app';
-/** Files above this size are rejected by the UI before reading (IMPORT_TOO_LARGE). */
-export const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
 const JSON_INDENT = 2;
 
@@ -42,6 +41,10 @@ export function exportTodos(todos: Todo[], now: Date): ExportFile {
 }
 
 export function parseImportFile(text: string): Result<Todo[]> {
+  // Defense in depth: the UI checks the file size first. A UTF-8 file has at least as many bytes
+  // as its text has UTF-16 code units, so a longer text is certainly over the limit.
+  if (text.length > MAX_IMPORT_BYTES) return fail('IMPORT_TOO_LARGE');
+
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -63,14 +66,15 @@ export function parseImportFile(text: string): Result<Todo[]> {
 
 /**
  * Copies the current todos aside right before an import replaces them (FR-13).
- * Best-effort, as the §4.1 signature returns void: a failed write (e.g. full storage) is ignored
- * so the user's confirmed import still goes ahead.
+ * A failed write (e.g. full storage) is reported so the caller can cancel the import (§4.1 v0.2).
  */
-export function backupBeforeImport(storage: Storage, todos: Todo[]): void {
+export function backupBeforeImport(storage: Storage, todos: Todo[]): Result<void> {
   try {
     storage.setItem(PRE_IMPORT_BACKUP_KEY, JSON.stringify(toStoredData(todos)));
+    return ok(undefined);
   } catch {
-    // Ignored on purpose; see the doc comment.
+    // Plan SC: FR-13 — without a safety copy the current data must not be replaced
+    return fail('IMPORT_BACKUP_FAILED');
   }
 }
 

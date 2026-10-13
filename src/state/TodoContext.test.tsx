@@ -171,7 +171,10 @@ describe('TodoProvider actions', () => {
 
     act(() => result.current.actions.remove(todos[1].id));
     expect(result.current.todos).toEqual([todos[0], todos[2]]);
-    expect(result.current.pendingUndo).toEqual([{ todo: todos[1], index: 1 }]);
+    expect(result.current.pendingUndo).toEqual({
+      reason: 'remove',
+      items: [{ todo: todos[1], index: 1 }],
+    });
     expect(storedTodos(storage)).toHaveLength(2);
 
     act(() => result.current.actions.undo());
@@ -209,7 +212,8 @@ describe('TodoProvider actions', () => {
 
     act(() => result.current.actions.clearCompleted());
     expect(result.current.todos.every((todo) => !todo.completed)).toBe(true);
-    expect(result.current.pendingUndo).toHaveLength(2);
+    expect(result.current.pendingUndo?.reason).toBe('clearCompleted');
+    expect(result.current.pendingUndo?.items).toHaveLength(2);
 
     act(() => result.current.actions.undo());
     expect(result.current.todos).toEqual(todos);
@@ -244,12 +248,68 @@ describe('TodoProvider actions', () => {
     const storage = storageWith(current);
     const { result } = renderStore(storage);
 
-    act(() => result.current.actions.importTodos(makeFixtureTodos()));
+    act(() => {
+      expect(result.current.actions.importTodos(makeFixtureTodos())).toEqual({
+        ok: true,
+        value: undefined,
+      });
+    });
 
     expect(JSON.parse(storage.getItem(PRE_IMPORT_BACKUP_KEY) ?? '')).toEqual({
       schemaVersion: 1,
       todos: current,
     });
+  });
+
+  it('importTodos keeps the current data and returns the error when the backup fails', () => {
+    vi.useFakeTimers();
+    const current = [makeTodo({ title: '기존' }), makeTodo()];
+    const storage = storageWith(current);
+    vi.spyOn(storage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+    const { result } = renderStore(storage);
+    act(() => result.current.actions.remove(current[1].id));
+
+    let imported: ReturnType<typeof result.current.actions.importTodos> | undefined;
+    act(() => {
+      imported = result.current.actions.importTodos(makeFixtureTodos());
+    });
+
+    expect(imported).toEqual({
+      ok: false,
+      error: {
+        code: 'IMPORT_BACKUP_FAILED',
+        message: '현재 데이터를 백업하지 못해 가져오기를 취소했습니다. 기존 데이터는 그대로입니다',
+      },
+    });
+    expect(result.current.todos).toEqual([current[0]]);
+    // The earlier removal can still be undone: nothing was replaced.
+    act(() => result.current.actions.undo());
+    expect(result.current.todos).toEqual(current);
+  });
+
+  it('importTodos replaces in memory when storage is unavailable', () => {
+    const { result } = renderStore(null);
+    const imported = makeFixtureTodos();
+
+    act(() => {
+      expect(result.current.actions.importTodos(imported).ok).toBe(true);
+    });
+
+    expect(result.current.todos).toEqual(imported);
+  });
+
+  it('exportFile and parseImport round-trip the current todos', () => {
+    const todos = makeFixtureTodos();
+    const { result } = renderStore(storageWith(todos));
+
+    const file = result.current.actions.exportFile();
+
+    expect(file.filename).toMatch(/^todo-app-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(JSON.parse(file.json)).toMatchObject({ app: 'todo-app', schemaVersion: 1, todos });
+    expect(result.current.actions.parseImport(file.json)).toEqual({ ok: true, value: todos });
+    expect(result.current.actions.parseImport('{').ok).toBe(false);
   });
 
   it('dismissUndo drops the pending removal', () => {

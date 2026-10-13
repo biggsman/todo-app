@@ -7,6 +7,7 @@ import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { PlusIcon } from './icons/PlusIcon';
 import { EMPTY_DETAILS, toFieldErrors } from './todoDetails';
 import { TodoDetailsFields } from './TodoDetailsFields';
+import { TODO_TITLE_INPUT_ID } from './todoFocus';
 import type { FormEvent } from 'react';
 import type { FieldErrors, TodoDetailsValue } from './todoDetails';
 import styles from './TodoInput.module.css';
@@ -48,6 +49,7 @@ export function TodoInput() {
     <form className={styles.form} onSubmit={handleSubmit} noValidate>
       <div className={styles.row}>
         <input
+          id={TODO_TITLE_INPUT_ID}
           className={styles.input}
           type="text"
           value={title}

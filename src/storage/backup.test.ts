@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_IMPORT_BYTES } from '@/domain/importFile';
 import { makeFixtureTodos, makeTodo } from '@/test/factories';
 import { MemoryStorage, QuotaExceededStorage } from '@/test/fakeStorage';
-import { MAX_IMPORT_BYTES, backupBeforeImport, exportTodos, parseImportFile } from './backup';
+import { backupBeforeImport, exportTodos, parseImportFile } from './backup';
 import { PRE_IMPORT_BACKUP_KEY } from './schema';
 import type { AppError } from '@/domain/todo';
 
@@ -51,6 +52,10 @@ describe('parseImportFile errors (§8.2 #12)', () => {
       ...overrides,
     });
 
+  it('returns IMPORT_TOO_LARGE for text over the 5MB limit without parsing it', () => {
+    expect(expectError(' '.repeat(MAX_IMPORT_BYTES + 1)).code).toBe('IMPORT_TOO_LARGE');
+  });
+
   it('returns IMPORT_INVALID_JSON for text that is not JSON', () => {
     expect(expectError('{ not json').code).toBe('IMPORT_INVALID_JSON');
     expect(expectError('').code).toBe('IMPORT_INVALID_JSON');
@@ -94,21 +99,22 @@ describe('backupBeforeImport', () => {
     const storage = new MemoryStorage();
     const todos = makeFixtureTodos();
 
-    backupBeforeImport(storage, todos);
-
+    expect(backupBeforeImport(storage, todos)).toEqual({ ok: true, value: undefined });
     expect(JSON.parse(storage.getItem(PRE_IMPORT_BACKUP_KEY) ?? '')).toEqual({
       schemaVersion: 1,
       todos,
     });
   });
 
-  it('does not throw when the storage is full', () => {
-    expect(() => backupBeforeImport(new QuotaExceededStorage(), [makeTodo()])).not.toThrow();
-  });
-});
+  it('returns IMPORT_BACKUP_FAILED instead of throwing when the storage is full', () => {
+    const result = backupBeforeImport(new QuotaExceededStorage(), [makeTodo()]);
 
-describe('MAX_IMPORT_BYTES', () => {
-  it('is 5MB', () => {
-    expect(MAX_IMPORT_BYTES).toBe(5 * 1024 * 1024);
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: 'IMPORT_BACKUP_FAILED',
+        message: '현재 데이터를 백업하지 못해 가져오기를 취소했습니다. 기존 데이터는 그대로입니다',
+      },
+    });
   });
 });

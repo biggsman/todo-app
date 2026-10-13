@@ -7,6 +7,8 @@ import { PencilIcon } from './icons/PencilIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { TodoBadges } from './TodoBadges';
 import { TodoEditor } from './TodoEditor';
+import { focusTitleInputAfterKeyboard, focusTodoRow } from './todoFocus';
+import type { MouseEvent } from 'react';
 import type { Todo } from '@/domain/todo';
 import styles from './TodoItem.module.css';
 
@@ -19,6 +21,7 @@ interface TodoItemProps {
 export function TodoItem({ todo, today }: TodoItemProps) {
   const { toggle, remove } = useTodoActions();
   const [isEditing, setIsEditing] = useState(false);
+  const rowRef = useRef<HTMLLIElement>(null);
   const titleRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef(false);
 
@@ -34,9 +37,19 @@ export function TodoItem({ todo, today }: TodoItemProps) {
     setIsEditing(false);
   }
 
+  function handleRemove(event: MouseEvent<HTMLButtonElement>) {
+    const row = rowRef.current;
+    // Read before removing: the neighbouring rows stay in the DOM while this one goes.
+    const neighbor = row?.nextElementSibling ?? row?.previousElementSibling;
+    remove(todo.id);
+    // Plan SC: FR-12 — keyboard focus moves to the next row (else the previous one, else the
+    // title input) instead of falling back to the page
+    if (!focusTodoRow(neighbor)) focusTitleInputAfterKeyboard(event);
+  }
+
   if (isEditing) {
     return (
-      <li className={`${styles.item} ${styles.editing}`}>
+      <li className={`${styles.item} ${styles.editing}`} data-todo-id={todo.id}>
         <TodoEditor todo={todo} onDone={closeEditor} />
       </li>
     );
@@ -45,7 +58,7 @@ export function TodoItem({ todo, today }: TodoItemProps) {
   const itemClassName = todo.completed ? `${styles.item} ${styles.completed}` : styles.item;
 
   return (
-    <li className={itemClassName}>
+    <li ref={rowRef} className={itemClassName} data-todo-id={todo.id}>
       <span className={styles.checkbox}>
         {/* Plan SC: FR-02 — toggling completion; the accessible name is the todo title */}
         <input
@@ -63,6 +76,7 @@ export function TodoItem({ todo, today }: TodoItemProps) {
           type="button"
           className={styles.title}
           onClick={() => setIsEditing(true)}
+          data-row-focus=""
         >
           {todo.title}
         </button>
@@ -80,7 +94,7 @@ export function TodoItem({ todo, today }: TodoItemProps) {
         <button
           type="button"
           className={`${styles.iconButton} ${styles.danger}`}
-          onClick={() => remove(todo.id)}
+          onClick={handleRemove}
           aria-label="삭제"
         >
           <TrashIcon />

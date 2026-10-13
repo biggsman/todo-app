@@ -41,7 +41,9 @@ export type ErrorCode =
   | 'STORAGE_CORRUPT'
   | 'IMPORT_INVALID_JSON'
   | 'IMPORT_SCHEMA_MISMATCH'
-  | 'IMPORT_TOO_LARGE';
+  | 'IMPORT_TOO_LARGE'
+  // v0.2: the pre-import backup could not be written, so the import was cancelled
+  | 'IMPORT_BACKUP_FAILED';
 
 export interface AppError {
   code: ErrorCode;

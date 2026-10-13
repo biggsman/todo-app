@@ -13,6 +13,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   IMPORT_INVALID_JSON: '올바른 JSON 파일이 아닙니다',
   IMPORT_SCHEMA_MISMATCH: 'todo-app 백업 파일이 아니거나 형식이 맞지 않습니다',
   IMPORT_TOO_LARGE: '5MB 이하 파일만 가져올 수 있습니다',
+  IMPORT_BACKUP_FAILED:
+    '현재 데이터를 백업하지 못해 가져오기를 취소했습니다. 기존 데이터는 그대로입니다',
 };
 
 export function ok<T>(value: T): Result<T, never> {

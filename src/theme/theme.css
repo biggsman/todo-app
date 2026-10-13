@@ -1,6 +1,6 @@
 /*
  * Design Ref: §10.4 — design tokens as CSS variables. Light values on :root, dark values on
- * [data-theme='dark'] (the toggle arrives with ThemeToggle/useTheme in module-5).
+ * [data-theme='dark'], set on <html> by useTheme (and by the pre-paint script in index.html).
  *
  * Look: calm "soft structuralism" — silver-grey canvas, white floating surfaces, hairline
  * borders and very diffused shadows. Text/background pairs below meet WCAG AA (≥ 4.5:1).
@@ -55,6 +55,20 @@
   --color-warning: #a14a00;
   --color-warning-soft: rgb(161 74 0 / 0.1);
 
+  /* Toast — an inverted island; contrast on --color-toast-bg: text 15.3, muted 8.6,
+     action 9.3, danger 8.2, success 9.9 */
+  --color-toast-bg: #1d1d22;
+  --color-toast-border: rgb(255 255 255 / 0.06);
+  --color-toast-text: #f4f4f6;
+  --color-toast-muted: #b9b9c2;
+  --color-toast-action: #b4bcff;
+  --color-toast-danger: #ff9a90;
+  --color-toast-success: #7fd9a4;
+  --color-toast-hover: rgb(255 255 255 / 0.08);
+
+  /* Modal backdrop (dialog) */
+  --color-backdrop: rgb(20 20 24 / 0.32);
+
   /* Radii (concentric: inner = outer - shell padding) */
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -80,6 +94,10 @@
   --control-height-sm: 32px;
   --badge-height: 22px;
   --content-max-width: 680px;
+
+  /* Layers — the only z-indexes in the app (the dialog uses the browser's top layer) */
+  --z-menu: 10;
+  --z-toast: 20;
 
   /* Shadows — wide, soft, low-alpha */
   --shadow-card: 0 1px 2px rgb(20 20 24 / 0.03), 0 24px 48px -24px rgb(20 20 24 / 0.12);
@@ -125,6 +143,17 @@
   --color-danger-soft: rgb(255 122 112 / 0.12);
   --color-warning: #f2a65a;
   --color-warning-soft: rgb(242 166 90 / 0.12);
+
+  /* contrast on --color-toast-bg: text 12.9, muted 6.2, action 7.4, danger 6.6, success 8.9 */
+  --color-toast-bg: #26262c;
+  --color-toast-border: rgb(255 255 255 / 0.1);
+  --color-toast-text: #ededf0;
+  --color-toast-muted: #a5a5ae;
+  --color-toast-action: #a7b0ff;
+  --color-toast-danger: #ff8a80;
+  --color-toast-success: #7fd9a4;
+
+  --color-backdrop: rgb(0 0 0 / 0.55);
 
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 24px 48px -24px rgb(0 0 0 / 0.6);
   --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 16px -8px rgb(0 0 0 / 0.5);

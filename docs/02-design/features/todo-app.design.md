@@ -188,7 +188,7 @@ export interface AppError { code: ErrorCode; message: string }
 | domain/todo | `updateTodo(todo: Todo, patch: TodoPatch, now: Date): Result<Todo>` | 수정 + updatedAt 갱신 | FR-03 |
 | domain/todo | `toggleTodo(todo: Todo, now: Date): Todo` | completed·completedAt 전환 | FR-02 |
 | domain/todo | `getDueStatus(todo: Todo, today: string): DueStatus` | 마감 상태 (완료 항목은 'none') | FR-06 |
-| domain/sort | `sortTodos(todos: Todo[], key: SortKey): Todo[]` | 새 배열 반환, 안정 정렬, 마감일 없음은 뒤로, 동률은 createdAt 내림차순 | FR-08 |
+| domain/sort | `sortTodos(todos: Todo[], key: SortKey): Todo[]` | 새 배열 반환, 안정 정렬, 마감일 없음은 뒤로, 동률은 createdAt 내림차순. `dueDate`·`priority` 정렬에서는 미완료 → 완료 순으로 먼저 나눈다 (v0.2) | FR-08 |
 | domain/filter | `filterTodos(todos: Todo[], query: TodoQuery): Todo[]` | 상태·텍스트·카테고리·태그 AND 조합 | FR-09, FR-10 |
 | domain/filter | `collectCategories(todos)`, `collectTags(todos)` | 사용 중인 값 목록(정렬됨) | FR-10 |
 | storage/schema | `parseStoredData(raw: unknown): Result<Todo[]>` | 스키마 버전·필드 검증 | FR-14 |
@@ -196,7 +196,7 @@ export interface AppError { code: ErrorCode; message: string }
 | storage/todoStorage | `saveTodos(storage: Storage, todos: Todo[]): Result<void>` | 용량 초과 시 STORAGE_QUOTA | FR-05 |
 | storage/backup | `exportTodos(todos: Todo[], now: Date): { filename: string; json: string }` | 내보내기 파일 내용 | FR-13 |
 | storage/backup | `parseImportFile(text: string): Result<Todo[]>` | JSON 파싱·app·schemaVersion·Todo 검증 | FR-13 |
-| storage/backup | `backupBeforeImport(storage: Storage, todos: Todo[]): void` | 가져오기 직전 백업 | FR-13 |
+| storage/backup | `backupBeforeImport(storage: Storage, todos: Todo[]): Result<void>` | 가져오기 직전 백업. 실패하면 가져오기를 중단하고 안내 (v0.2) | FR-13 |
 | state/todoReducer | `todoReducer(state: TodoState, action: TodoAction): TodoState` | 아래 4.2 액션 처리 | FR-01~04, 12, 13 |
 | state/useUndo | `useUndo(): { pending, offer(removed), undo(), dismiss() }` | 5초 되돌리기 | FR-12 |
 | theme/useTheme | `useTheme(): { theme, toggle() }` | 시스템 기본, 수동 선택 저장 | FR-11 |
@@ -335,6 +335,7 @@ interface TodoState { todos: Todo[] }
 | `IMPORT_INVALID_JSON` | 올바른 JSON 파일이 아닙니다 | 파싱 실패 | 토스트, 데이터 변경 없음 |
 | `IMPORT_SCHEMA_MISMATCH` | todo-app 백업 파일이 아니거나 형식이 맞지 않습니다 | 검증 실패 | 토스트, 데이터 변경 없음 |
 | `IMPORT_TOO_LARGE` | 5MB 이하 파일만 가져올 수 있습니다 | 파일 크기 | 읽기 전 거부 |
+| `IMPORT_BACKUP_FAILED` | 현재 데이터를 백업하지 못해 가져오기를 취소했습니다. 기존 데이터는 그대로입니다 | 가져오기 직전 백업 쓰기 실패 (v0.2) | 가져오기 중단, 데이터 변경 없음 |
 
 ### 6.2 Error Response Format
 
@@ -594,3 +595,4 @@ todo-app/
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1 | 2026-10-12 | Initial draft — Option C 선택 (Checkpoint 3) | biggsman |
+| 0.2 | 2026-10-13 | module-5 결정 반영: 마감일·우선순위 정렬 시 완료 항목은 뒤로, `backupBeforeImport`가 `Result` 반환(실패 시 가져오기 중단), 파일 크기 상수 `MAX_IMPORT_BYTES`는 domain으로 이동, 오류 코드 `IMPORT_BACKUP_FAILED` 추가 | biggsman |

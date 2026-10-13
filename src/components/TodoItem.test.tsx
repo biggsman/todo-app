@@ -16,7 +16,9 @@ function ListFromContext() {
 
 function PendingUndoProbe() {
   const { pendingUndo } = useTodos();
-  return <output aria-label="되돌리기 대기">{pendingUndo?.map((item) => item.todo.title)}</output>;
+  return (
+    <output aria-label="되돌리기 대기">{pendingUndo?.items.map((item) => item.todo.title)}</output>
+  );
 }
 
 function renderList(todos: Todo[]) {

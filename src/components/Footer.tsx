@@ -1,6 +1,7 @@
 // Design Ref: §5.1, §5.4 — remaining count, clear-completed action, and the local-only notice.
 import { useMemo } from 'react';
 import { useTodoActions, useTodos } from '@/state/TodoContext';
+import { focusTitleInputAfterKeyboard } from './todoFocus';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -19,7 +20,11 @@ export function Footer() {
         <button
           type="button"
           className={styles.clearButton}
-          onClick={clearCompleted}
+          onClick={(event) => {
+            clearCompleted();
+            // The button is disabled right after, so focus would otherwise drop to the page.
+            focusTitleInputAfterKeyboard(event);
+          }}
           disabled={completedCount === 0}
         >
           완료 항목 삭제

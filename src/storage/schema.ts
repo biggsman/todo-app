@@ -9,7 +9,7 @@ import type { Priority, Result, Todo } from '@/domain/todo';
 export const CURRENT_SCHEMA_VERSION = 1;
 
 export const STORAGE_KEY = 'todo-app:v1';
-export const THEME_KEY = 'todo-app:theme';
+// `todo-app:theme` (§3.3) is a UI preference owned by theme/useTheme.ts, which may not import storage/.
 export const CORRUPT_BACKUP_KEY = 'todo-app:corrupt-backup';
 export const PRE_IMPORT_BACKUP_KEY = 'todo-app:pre-import-backup';
 

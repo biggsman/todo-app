@@ -1,0 +1,175 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch-target);
+  padding: 0 var(--space-3) 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft),
+    transform var(--duration-fast) var(--ease-out-soft);
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.trigger:active {
+  transform: scale(0.97);
+}
+
+.triggerIcon {
+  flex-shrink: 0;
+}
+
+.chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--duration-base) var(--ease-out-soft);
+}
+
+.trigger[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+/* Floating panel: outer shell + inner items (double bezel), anchored to the trigger's right edge. */
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-menu);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 232px;
+  padding: var(--shell-padding);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    var(--shadow-inset-highlight),
+    var(--shadow-raised),
+    0 24px 48px -16px rgb(20 20 24 / 0.18);
+  transform-origin: top right;
+  animation: menu-enter var(--duration-base) var(--ease-out-soft);
+}
+
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  border: 0;
+  border-radius: calc(var(--radius-lg) - var(--shell-padding));
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  animation: item-reveal var(--duration-slow) var(--ease-out-soft) backwards;
+  transition: background-color var(--duration-fast) var(--ease-out-soft);
+}
+
+.item + .item {
+  animation-delay: 40ms;
+}
+
+@keyframes item-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.item:hover,
+.item:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+.item:focus-visible {
+  outline-offset: -2px;
+}
+
+.itemIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  color: var(--color-text-muted);
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.item:hover .itemIcon {
+  transform: translateY(-1px) scale(1.05);
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.35;
+}
+
+.itemHint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+/* Narrow screens: icon-only trigger (the label stays for screen readers). */
+@media (max-width: 480px) {
+  .trigger {
+    justify-content: center;
+    width: var(--touch-target);
+    padding: 0;
+  }
+
+  .triggerLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .chevron {
+    display: none;
+  }
+}

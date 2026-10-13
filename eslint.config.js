@@ -19,7 +19,7 @@ const forbidLayers = (layers, message) => ({
 const TEST_FILES = ['src/**/*.test.{ts,tsx}', 'src/test/**'];
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage', 'docs', '.bkit']),
+  globalIgnores(['dist', 'coverage', 'docs', '.bkit', 'test-results', 'playwright-report']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -32,6 +32,11 @@ export default defineConfig([
       ecmaVersion: 2023,
       globals: globals.browser,
     },
+  },
+  {
+    // Playwright tests and tool configs run in Node, not in the app's browser bundle.
+    files: ['e2e/**/*.ts', '*.config.{js,ts}'],
+    languageOptions: { globals: globals.node },
   },
   {
     // domain imports nothing outside its own folder (no React, no browser, no other layers)

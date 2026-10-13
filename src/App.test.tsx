@@ -1,9 +1,11 @@
-// Design Ref: §8.3 — L2 UI scenarios #1–8 against the whole page with in-memory storage.
+// Design Ref: §8.3 — L2 UI scenarios #1–9 against the whole page with in-memory storage.
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { STORAGE_KEY, toStoredData } from '@/storage/schema';
 import { makeFixtureTodos, makeTodo } from '@/test/factories';
 import { MemoryStorage } from '@/test/fakeStorage';
+import { mockSystemColorScheme } from '@/test/matchMedia';
+import { THEME_STORAGE_KEY } from '@/theme/useTheme';
 import App from './App';
 import type { Todo } from '@/domain/todo';
 
@@ -224,17 +226,20 @@ describe('App — details, filters and sort (§8.3 #7–8, §5.4)', () => {
 
     fireEvent.change(sortSelect(), { target: { value: 'priority' } });
 
+    // Open todos first (high → low), then the completed ones (v0.2).
     const titles = listTitles();
-    expect(titles.slice(0, 3).sort()).toEqual(['보고서 제출', '세금 납부', '회의 준비'].sort());
-    expect(titles.slice(-2).sort()).toEqual(['책 읽기', '청소'].sort());
+    expect(titles.slice(0, 2).sort()).toEqual(['보고서 제출', '회의 준비'].sort());
+    expect(titles.slice(4, 6).sort()).toEqual(['책 읽기', '청소'].sort());
+    expect(titles.slice(-2)).toEqual(['세금 납부', '운동']);
   });
 
-  it('defaults to 마감일순 with undated todos last', () => {
+  it('defaults to 마감일순: open todos by date, undated next, completed last', () => {
     renderApp(storageWith(makeFixtureTodos()));
 
     expect(sortSelect()).toHaveValue('dueDate');
-    expect(listTitles()[0]).toBe('세금 납부');
-    expect(listTitles().slice(-2).sort()).toEqual(['책 읽기', '청소'].sort());
+    expect(listTitles()[0]).toBe('보고서 제출');
+    expect(listTitles().slice(4, 6).sort()).toEqual(['책 읽기', '청소'].sort());
+    expect(listTitles().slice(-2)).toEqual(['세금 납부', '운동']);
   });
 
   it('filters by category and tag with options taken from the data', () => {
@@ -349,5 +354,24 @@ describe('App — details, filters and sort (§8.3 #7–8, §5.4)', () => {
       dueDate: '2026-11-01',
     });
     expect(within(listItems()[0]).getByText('낮음')).toBeInTheDocument();
+  });
+});
+
+describe('App — theme (§8.3 #9)', () => {
+  it('#9 the theme toggle switches html[data-theme] and stores the choice', () => {
+    const system = mockSystemColorScheme(false);
+    renderApp();
+    expect(document.documentElement.dataset.theme).toBe('light');
+
+    fireEvent.click(screen.getByRole('button', { name: '다크 모드로 전환' }));
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+
+    fireEvent.click(screen.getByRole('button', { name: '라이트 모드로 전환' }));
+
+    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+    system.restore();
   });
 });

@@ -4,14 +4,24 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { ok } from '@/domain/errors';
 import { createTodo, updateTodo } from '@/domain/todo';
-import { backupBeforeImport } from '@/storage/backup';
+import { backupBeforeImport, exportTodos, parseImportFile } from '@/storage/backup';
 import { getBrowserStorage, loadTodos, saveTodos } from '@/storage/todoStorage';
 import { todoReducer } from './todoReducer';
 import { useUndo } from './useUndo';
 import type { ReactNode } from 'react';
 import type { AppError, NewTodoInput, Result, Todo, TodoPatch } from '@/domain/todo';
+import type { ExportFile } from '@/storage/backup';
 import type { LoadResult } from '@/storage/todoStorage';
 import type { RemovedItem } from './todoReducer';
+
+// Re-exported so components can name these types without importing storage/ (§9.3).
+export type { ExportFile, RemovedItem };
+
+/** What the pending Undo would bring back; the reason picks the toast wording (FR-12). */
+export interface PendingUndo {
+  reason: 'remove' | 'clearCompleted';
+  items: RemovedItem[];
+}
 
 export interface StorageStatus {
   /** Stored data was corrupt; the original was backed up and the app started empty (FR-14). */
@@ -26,7 +36,7 @@ export interface TodosValue {
   todos: Todo[];
   storageStatus: StorageStatus;
   /** Removed items that can still be restored with `undo()`, or null. */
-  pendingUndo: RemovedItem[] | null;
+  pendingUndo: PendingUndo | null;
 }
 
 export interface TodoActions {
@@ -36,8 +46,15 @@ export interface TodoActions {
   toggle: (id: string) => void;
   remove: (id: string) => void;
   clearCompleted: () => void;
-  /** Replaces all todos with already-validated imported ones, after a pre-import backup. */
-  importTodos: (todos: Todo[]) => void;
+  /** Current todos as a backup file (FR-13). */
+  exportFile: () => ExportFile;
+  /** Validates the text of an import file; nothing changes until `importTodos`. */
+  parseImport: (text: string) => Result<Todo[]>;
+  /**
+   * Replaces all todos with already-validated imported ones. The current list is backed up first;
+   * if that backup fails, nothing is replaced and the error is returned (§4.1 v0.2).
+   */
+  importTodos: (todos: Todo[]) => Result<void>;
   undo: () => void;
   dismissUndo: () => void;
 }
@@ -60,6 +77,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
   const [state, dispatch] = useReducer(todoReducer, { todos: initial.todos });
   const [saveError, setSaveError] = useState<AppError | null>(null);
   const { pending, offer, undo, dismiss } = useUndo();
+  const [undoReason, setUndoReason] = useState<PendingUndo['reason']>('remove');
   const lastSavedRef = useRef(initial.todos);
 
   useEffect(() => {
@@ -97,6 +115,7 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         dispatch({ type: 'remove', id });
         // Plan SC: FR-12 — the removed todo and its position go to the Undo slot
         offer([{ todo: todos[index], index }]);
+        setUndoReason('remove');
       },
       clearCompleted() {
         const removed = todos
@@ -105,13 +124,26 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         if (removed.length === 0) return;
         dispatch({ type: 'clearCompleted' });
         offer(removed);
+        setUndoReason('clearCompleted');
+      },
+      exportFile() {
+        return exportTodos(todos, new Date());
+      },
+      parseImport(text) {
+        return parseImportFile(text);
       },
       importTodos(imported) {
-        // Plan SC: FR-13 — current data is copied aside before the import replaces it
-        if (storage) backupBeforeImport(storage, todos);
+        // Plan SC: FR-13 — current data is copied aside before the import replaces it, and a
+        // failed backup cancels the import. Without storage there is nothing persisted to protect
+        // (the app runs in memory only), so the confirmed import goes ahead.
+        if (storage) {
+          const backup = backupBeforeImport(storage, todos);
+          if (!backup.ok) return backup;
+        }
         dispatch({ type: 'replaceAll', todos: imported });
         // Restoring old positions into a replaced list would mix the two data sets.
         dismiss();
+        return ok(undefined);
       },
       undo() {
         const items = undo();
@@ -126,9 +158,9 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
     () => ({
       todos,
       storageStatus: { recovered: initial.recovered, unavailable: storage === null, saveError },
-      pendingUndo: pending,
+      pendingUndo: pending && { reason: undoReason, items: pending },
     }),
-    [todos, initial.recovered, storage, saveError, pending],
+    [todos, initial.recovered, storage, saveError, pending, undoReason],
   );
 
   return (

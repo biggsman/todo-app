@@ -1,0 +1,47 @@
+/* Both glyphs are stacked; the one for the *other* theme is shown (moon in light, sun in dark). */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    color var(--duration-fast) var(--ease-out-soft),
+    transform var(--duration-fast) var(--ease-out-soft);
+}
+
+.toggle:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.toggle:active {
+  transform: scale(0.94);
+}
+
+.icon {
+  position: absolute;
+  transition:
+    opacity var(--duration-base) var(--ease-out-soft),
+    transform var(--duration-slow) var(--ease-spring);
+}
+
+.sun,
+.toggle[data-current='light'] .moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.toggle[data-current='light'] .sun,
+.toggle[data-current='dark'] .moon {
+  opacity: 0;
+  transform: rotate(-60deg) scale(0.6);
+}
