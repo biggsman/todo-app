@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MAX_IMPORT_BYTES } from '@/domain/importFile';
 import { makeFixtureTodos, makeTodo } from '@/test/factories';
 import { MemoryStorage, QuotaExceededStorage } from '@/test/fakeStorage';
-import { backupBeforeImport, exportTodos, parseImportFile } from './backup';
+import { backupBeforeImport, describeSchemaPath, exportTodos, parseImportFile } from './backup';
 import { PRE_IMPORT_BACKUP_KEY } from './schema';
 import type { AppError } from '@/domain/todo';
 
@@ -85,8 +85,14 @@ describe('parseImportFile errors (§8.2 #12)', () => {
 
     expect(error).toEqual({
       code: 'IMPORT_SCHEMA_MISMATCH',
-      message: 'todo-app 백업 파일이 아니거나 형식이 맞지 않습니다 (todos[1].priority)',
+      message: 'todo-app 백업 파일이 아니거나 형식이 맞지 않습니다 (2번째 항목의 priority)',
     });
+  });
+
+  it('names a whole invalid item by its position', () => {
+    const error = expectError(validFile({ todos: [makeTodo(), 42] }));
+
+    expect(error.message).toBe('todo-app 백업 파일이 아니거나 형식이 맞지 않습니다 (2번째 항목)');
   });
 
   it('returns IMPORT_SCHEMA_MISMATCH when todos is missing', () => {
@@ -116,5 +122,18 @@ describe('backupBeforeImport', () => {
         message: '현재 데이터를 백업하지 못해 가져오기를 취소했습니다. 기존 데이터는 그대로입니다',
       },
     });
+  });
+});
+
+describe('describeSchemaPath (§6.1 v0.3)', () => {
+  it.each([
+    ['todos[0].title', '1번째 항목의 title'],
+    ['todos[11].dueDate', '12번째 항목의 dueDate'],
+    ['todos[2]', '3번째 항목'],
+    ['todos', 'todos'],
+    ['app', 'app'],
+    ['schemaVersion', 'schemaVersion'],
+  ])('%s -> %s', (path, expected) => {
+    expect(describeSchemaPath(path)).toBe(expected);
   });
 });

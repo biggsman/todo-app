@@ -78,9 +78,28 @@ export function backupBeforeImport(storage: Storage, todos: Todo[]): Result<void
   }
 }
 
+/** `todos[2].priority` and `todos[0]` as produced by parseTodoList (schema.ts). */
+const TODO_PATH = /^todos\[(\d+)\](?:\.(\w+))?$/;
+
+/**
+ * Human-readable location for the toast (§4.2, §6.1 v0.3): `todos[2].priority` →
+ * `3번째 항목의 priority`, `todos[0]` → `1번째 항목`. Top-level keys (`app`, `schemaVersion`,
+ * `todos`) stay as they are, since they name what the user would look for in the file.
+ */
+export function describeSchemaPath(path: string): string {
+  const match = TODO_PATH.exec(path);
+  if (!match) return path;
+  const position = `${Number(match[1]) + 1}번째 항목`;
+  return match[2] ? `${position}의 ${match[2]}` : position;
+}
+
 /** IMPORT_SCHEMA_MISMATCH whose message names the first invalid field (§4.2). */
 function schemaMismatch(path?: string): Result<never> {
   if (path === undefined) return fail('IMPORT_SCHEMA_MISMATCH');
   const error = makeError('IMPORT_SCHEMA_MISMATCH');
-  return { ok: false, error: { ...error, message: `${error.message} (${path})` } };
+  // Plan SC: FR-13 — the user can find the broken spot in the file
+  return {
+    ok: false,
+    error: { ...error, message: `${error.message} (${describeSchemaPath(path)})` },
+  };
 }

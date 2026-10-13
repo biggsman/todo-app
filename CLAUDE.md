@@ -13,7 +13,7 @@
 - React 19 + Vite 8 + TypeScript 6 (`strict: true`)
 - 테스트: Vitest 4 + Testing Library + jsdom, 커버리지 `@vitest/coverage-v8`
 - 린트·포맷: ESLint 10 (flat config, typescript-eslint) + Prettier (`eslint-config-prettier`)
-- 런타임 의존성은 React만. 새 라이브러리는 꼭 필요할 때만 추가한다.
+- 런타임 의존성은 React와 self-hosted 웹폰트(Geist, Pretendard)뿐. 새 라이브러리는 꼭 필요할 때만 추가한다.
 
 ## 명령
 
@@ -26,9 +26,10 @@
 | 린트        | `npm run lint`                                                   |
 | 타입 체크   | `npm run typecheck`                                              |
 | 빌드        | `npm run build` (`tsc -b && vite build`)                         |
+| E2E         | `npm run test:e2e` (프로덕션 빌드 + 설치된 Chrome, 포트 4181)    |
 | 포맷        | `npm run format` (확인만: `npm run format:check`)                |
 
-작업을 마치기 전에 `lint`, `typecheck`, `test`, `coverage`, `build`를 모두 통과시킨다.
+작업을 마치기 전에 `lint`, `typecheck`, `test`, `coverage`, `build`, `format:check`, `test:e2e`를 모두 통과시킨다.
 
 ## 폴더와 레이어 (설계 §9)
 
@@ -38,7 +39,7 @@ src/
   storage/     localStorage 입출력, 스키마 검증, JSON 백업
   state/       todoReducer, TodoContext, useUndo
   components/  UI 컴포넌트 (*.tsx + *.module.css)
-  theme/       useTheme, theme.css
+  theme/       useTheme, theme.css (`todo-app:theme` 키는 theme/useTheme.ts가 소유)
   test/        setup.ts, factories.ts (makeTodo, makeTodos, makeFixtureTodos)
 ```
 
@@ -53,6 +54,7 @@ src/
 
 - ESLint `no-restricted-imports`가 위 규칙을 강제한다 (`eslint.config.js`). 테스트 파일은 예외.
 - domain은 시계·난수를 직접 쓰지 않는다. `now: Date`, `id: string`, `today: 'YYYY-MM-DD'`를 인자로 받는다.
+- `todo-app:theme` 키는 UI 설정이므로 storage/가 아니라 `theme/useTheme.ts`가 직접 읽고 쓴다 (index.html의 초기 테마 스크립트와 키를 맞춘다). 나머지 키(`todo-app:v1`, `corrupt-backup`, `pre-import-backup`)는 `storage/schema.ts`.
 - "오늘" 계산과 날짜 문자열 처리는 `src/domain/date.ts`에서만 한다 (로컬 시간대 기준).
 
 ## 컨벤션 (설계 §10)

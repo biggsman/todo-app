@@ -1,4 +1,4 @@
-// Design Ref: §8.4 — L3 E2E scenarios #1–6 in a real browser against the production build.
+// Design Ref: §8.4 — L3 E2E scenarios #1–7 in a real browser against the production build.
 // Every test gets a fresh browser context, so localStorage starts empty each time.
 import { readFile, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
@@ -246,6 +246,33 @@ test.describe('§8.4 E2E', () => {
     await tabTo(page, page.getByRole('button', { name: '되돌리기' }));
     await page.keyboard.press('Enter');
     await expect(page.getByRole('button', { name: '고친 할 일' })).toBeFocused();
+  });
+
+  test('#7 the Undo toast waits while hovered or focused (WCAG 2.2.1)', async ({ page }) => {
+    // Fake clock: time only moves when the test says so.
+    await page.clock.install();
+    await page.goto('/');
+    await addTodo(page, { title: '잠깐 보류' });
+    await row(page, '잠깐 보류').getByRole('button', { name: '삭제' }).click();
+    const toast = page.locator('[data-tone="undo"]');
+    const undoButton = toast.getByRole('button', { name: '되돌리기' });
+
+    await toast.hover();
+    await page.clock.runFor(15_000);
+    await expect(undoButton).toBeVisible();
+
+    await page.mouse.move(0, 0);
+    await undoButton.focus();
+    await page.clock.runFor(15_000);
+    await expect(undoButton).toBeVisible();
+
+    // Leaving the toast (pointer already out, focus moves away) restarts a full 5s window.
+    await page.getByPlaceholder(PLACEHOLDER).focus();
+    await page.clock.runFor(4_500);
+    await expect(undoButton).toBeVisible();
+    await page.clock.runFor(1_000);
+    await expect(toast).toHaveCount(0);
+    expect(await checkboxTitles(page)).toEqual([]);
   });
 
   test.describe('#6 dark mode', () => {

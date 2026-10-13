@@ -39,6 +39,8 @@ export type ErrorCode =
   | 'STORAGE_QUOTA'
   | 'STORAGE_UNAVAILABLE'
   | 'STORAGE_CORRUPT'
+  // v0.3: stored data was corrupt and its original could NOT be kept aside
+  | 'STORAGE_CORRUPT_UNSAVED'
   | 'IMPORT_INVALID_JSON'
   | 'IMPORT_SCHEMA_MISMATCH'
   | 'IMPORT_TOO_LARGE'

@@ -6,22 +6,26 @@ import { getBrowserStorage, isQuotaExceededError, loadTodos, saveTodos } from '.
 
 describe('loadTodos (§8.2 #9)', () => {
   it('returns an empty list when nothing is stored', () => {
-    expect(loadTodos(new MemoryStorage())).toEqual({ todos: [], recovered: false });
+    expect(loadTodos(new MemoryStorage())).toEqual({
+      todos: [],
+      recovered: false,
+      backupSaved: false,
+    });
   });
 
   it('returns stored todos', () => {
     const todos = makeFixtureTodos();
     const storage = new MemoryStorage({ [STORAGE_KEY]: JSON.stringify(toStoredData(todos)) });
 
-    expect(loadTodos(storage)).toEqual({ todos, recovered: false });
+    expect(loadTodos(storage)).toEqual({ todos, recovered: false, backupSaved: false });
     expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBeNull();
   });
 
-  it('backs up broken JSON and starts empty with recovered=true', () => {
+  it('backs up broken JSON and starts empty with recovered=true, backupSaved=true', () => {
     const raw = '{"schemaVersion":1,"todos":[';
     const storage = new MemoryStorage({ [STORAGE_KEY]: raw });
 
-    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true });
+    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true, backupSaved: true });
     expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBe(raw);
   });
 
@@ -31,18 +35,47 @@ describe('loadTodos (§8.2 #9)', () => {
     const raw = JSON.stringify({ schemaVersion: 1, todos: [withoutPriority] });
     const storage = new MemoryStorage({ [STORAGE_KEY]: raw });
 
-    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true });
+    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true, backupSaved: true });
     expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBe(raw);
   });
 
-  it('still reports recovery when the backup itself cannot be written', () => {
+  it('reports backupSaved=false when the backup itself cannot be written (G3)', () => {
     const storage = new QuotaExceededStorage({ [STORAGE_KEY]: 'not json' });
 
-    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true });
+    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true, backupSaved: false });
+    expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBeNull();
+    // The only copy of the original is still where it was.
+    expect(storage.getItem(STORAGE_KEY)).toBe('not json');
+  });
+
+  it('does not rewrite an identical backup (reload before any change)', () => {
+    const storage = new MemoryStorage({
+      [STORAGE_KEY]: 'not json',
+      [CORRUPT_BACKUP_KEY]: 'not json',
+    });
+    const setItem = vi.spyOn(storage, 'setItem');
+
+    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true, backupSaved: true });
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it('keeps an earlier, different backup and reports backupSaved=false', () => {
+    const storage = new MemoryStorage({
+      [STORAGE_KEY]: 'second corruption',
+      [CORRUPT_BACKUP_KEY]: 'first corruption',
+    });
+
+    expect(loadTodos(storage)).toEqual({ todos: [], recovered: true, backupSaved: false });
+    expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBe('first corruption');
+    expect(storage.getItem(STORAGE_KEY)).toBe('second corruption');
   });
 
   it('treats unreadable storage as empty', () => {
-    expect(loadTodos(new BlockedStorage())).toEqual({ todos: [], recovered: false });
+    expect(loadTodos(new BlockedStorage())).toEqual({
+      todos: [],
+      recovered: false,
+      backupSaved: false,
+    });
   });
 });
 

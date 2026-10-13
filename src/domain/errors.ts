@@ -10,6 +10,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   STORAGE_QUOTA: '저장 공간이 부족해 저장하지 못했습니다. 내보내기로 백업하세요',
   STORAGE_UNAVAILABLE: '이 브라우저에서는 저장할 수 없습니다 (시크릿 모드 등)',
   STORAGE_CORRUPT: '저장된 데이터가 손상되어 새로 시작합니다. 원본은 따로 보관했습니다',
+  STORAGE_CORRUPT_UNSAVED:
+    '저장된 데이터가 손상되어 새로 시작합니다. 원본을 따로 보관하지 못해, 할 일을 추가하거나 바꾸면 원본이 사라집니다',
   IMPORT_INVALID_JSON: '올바른 JSON 파일이 아닙니다',
   IMPORT_SCHEMA_MISMATCH: 'todo-app 백업 파일이 아니거나 형식이 맞지 않습니다',
   IMPORT_TOO_LARGE: '5MB 이하 파일만 가져올 수 있습니다',

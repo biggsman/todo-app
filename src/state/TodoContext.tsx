@@ -24,8 +24,13 @@ export interface PendingUndo {
 }
 
 export interface StorageStatus {
-  /** Stored data was corrupt; the original was backed up and the app started empty (FR-14). */
+  /** Stored data was corrupt and the app started empty (FR-14). */
   recovered: boolean;
+  /**
+   * With `recovered`: whether the corrupt original is kept under `todo-app:corrupt-backup` (§6.1
+   * v0.3). When false the original stays under `todo-app:v1` only until the user's first change.
+   */
+  backupSaved: boolean;
   /** localStorage cannot be used; changes live in memory only (STORAGE_UNAVAILABLE). */
   unavailable: boolean;
   /** Error of the most recent save, cleared by the next successful save. */
@@ -57,6 +62,10 @@ export interface TodoActions {
   importTodos: (todos: Todo[]) => Result<void>;
   undo: () => void;
   dismissUndo: () => void;
+  /** Stops the Undo countdown while the toast is hovered or focused (§4.1 v0.3, WCAG 2.2.1). */
+  pauseUndo: () => void;
+  /** Restarts a full 5s Undo window once the toast is neither hovered nor focused. */
+  resumeUndo: () => void;
 }
 
 interface TodoProviderProps {
@@ -65,7 +74,7 @@ interface TodoProviderProps {
   storage?: Storage | null;
 }
 
-const EMPTY_LOAD: LoadResult = { todos: [], recovered: false };
+const EMPTY_LOAD: LoadResult = { todos: [], recovered: false, backupSaved: false };
 
 const TodosContext = createContext<TodosValue | null>(null);
 const TodoActionsContext = createContext<TodoActions | null>(null);
@@ -76,12 +85,14 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
   const [initial] = useState(() => (storage ? loadTodos(storage) : EMPTY_LOAD));
   const [state, dispatch] = useReducer(todoReducer, { todos: initial.todos });
   const [saveError, setSaveError] = useState<AppError | null>(null);
-  const { pending, offer, undo, dismiss } = useUndo();
+  const { pending, offer, undo, dismiss, pause, resume } = useUndo();
   const [undoReason, setUndoReason] = useState<PendingUndo['reason']>('remove');
   const lastSavedRef = useRef(initial.todos);
 
   useEffect(() => {
     // Skips the initial (already stored) list; also keeps StrictMode's double effect harmless.
+    // Plan SC: FR-14 — this is also the corrupt-data rule (§2.2 v0.3): after a recovery the stored
+    // original under STORAGE_KEY is never overwritten on start, only by the first user change.
     if (!storage || state.todos === lastSavedRef.current) return;
     lastSavedRef.current = state.todos;
     // Plan SC: FR-05 — every change is saved automatically
@@ -150,17 +161,24 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         if (items) dispatch({ type: 'restore', items });
       },
       dismissUndo: dismiss,
+      pauseUndo: pause,
+      resumeUndo: resume,
     }),
-    [todos, storage, offer, undo, dismiss],
+    [todos, storage, offer, undo, dismiss, pause, resume],
   );
 
   const value = useMemo<TodosValue>(
     () => ({
       todos,
-      storageStatus: { recovered: initial.recovered, unavailable: storage === null, saveError },
+      storageStatus: {
+        recovered: initial.recovered,
+        backupSaved: initial.backupSaved,
+        unavailable: storage === null,
+        saveError,
+      },
       pendingUndo: pending && { reason: undoReason, items: pending },
     }),
-    [todos, initial.recovered, storage, saveError, pending, undoReason],
+    [todos, initial.recovered, initial.backupSaved, storage, saveError, pending, undoReason],
   );
 
   return (

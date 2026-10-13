@@ -5,8 +5,8 @@ import { useTodoActions, useTodos } from '@/state/TodoContext';
 import { AlertIcon } from './icons/AlertIcon';
 import { CheckIcon } from './icons/CheckIcon';
 import { CloseIcon } from './icons/CloseIcon';
-import { UndoIcon } from './icons/UndoIcon';
 import { focusTitleInputAfterKeyboard, focusTodoById } from './todoFocus';
+import { UndoToast } from './UndoToast';
 import type { MouseEvent } from 'react';
 import type { PendingUndo } from '@/state/TodoContext';
 import type { Notice } from './useNotices';
@@ -56,34 +56,14 @@ export function Toast({ notices, onDismissNotice }: ToastProps) {
           </button>
         </div>
       ))}
-      {/* Plan SC: FR-12 — a removal can be undone from the toast for 5 seconds */}
+      {/* Plan SC: FR-12 — a removal can be undone from the toast (countdown pauses on hover/focus) */}
       {pendingUndo && (
-        <div className={styles.toast} data-tone="undo">
-          <p className={styles.message}>{undoMessage(pendingUndo)}</p>
-          <button
-            type="button"
-            className={styles.undoButton}
-            onClick={(event) => handleUndo(pendingUndo, event)}
-          >
-            되돌리기
-            <span className={styles.undoIcon}>
-              <UndoIcon />
-            </span>
-          </button>
-          <button
-            type="button"
-            className={styles.closeButton}
-            onClick={(event) => closeWith(dismissUndo, event)}
-            aria-label="알림 닫기"
-          >
-            <CloseIcon />
-          </button>
-        </div>
+        <UndoToast
+          pending={pendingUndo}
+          onUndo={handleUndo}
+          onClose={(event) => closeWith(dismissUndo, event)}
+        />
       )}
     </div>
   );
-}
-
-function undoMessage({ reason, items }: PendingUndo): string {
-  return reason === 'clearCompleted' ? `완료 항목 ${items.length}개 삭제됨` : '삭제됨';
 }

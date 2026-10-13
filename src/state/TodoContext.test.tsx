@@ -48,6 +48,7 @@ describe('TodoProvider loading', () => {
     expect(result.current.todos).toEqual(todos);
     expect(result.current.storageStatus).toEqual({
       recovered: false,
+      backupSaved: false,
       unavailable: false,
       saveError: null,
     });
@@ -61,7 +62,42 @@ describe('TodoProvider loading', () => {
 
     expect(result.current.todos).toEqual([]);
     expect(result.current.storageStatus.recovered).toBe(true);
+    expect(result.current.storageStatus.backupSaved).toBe(true);
     expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBe('{broken');
+  });
+
+  describe('corrupt data whose original could not be kept aside (G3, §2.2 v0.3)', () => {
+    function unsavedStorage(): MemoryStorage {
+      // An earlier, different corrupt-backup occupies the key, so the new original is not saved.
+      return new MemoryStorage({ [STORAGE_KEY]: '{second', [CORRUPT_BACKUP_KEY]: '{first' });
+    }
+
+    it('flags backupSaved=false and leaves the original under todo-app:v1 on start', () => {
+      const storage = unsavedStorage();
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <StrictMode>
+          <TodoProvider storage={storage}>{children}</TodoProvider>
+        </StrictMode>
+      );
+
+      const { result } = renderHook(useTodoStore, { wrapper });
+
+      expect(result.current.storageStatus).toMatchObject({ recovered: true, backupSaved: false });
+      expect(storage.getItem(STORAGE_KEY)).toBe('{second');
+      expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBe('{first');
+    });
+
+    it('overwrites todo-app:v1 only with the first user change', () => {
+      const storage = unsavedStorage();
+      const { result } = renderStore(storage);
+
+      act(() => {
+        result.current.actions.add({ title: '새 시작' });
+      });
+
+      expect(storedTodos(storage).map((todo) => todo.title)).toEqual(['새 시작']);
+      expect(storage.getItem(CORRUPT_BACKUP_KEY)).toBe('{first');
+    });
   });
 
   it('works in memory and flags unavailable storage', () => {
@@ -310,6 +346,21 @@ describe('TodoProvider actions', () => {
     expect(JSON.parse(file.json)).toMatchObject({ app: 'todo-app', schemaVersion: 1, todos });
     expect(result.current.actions.parseImport(file.json)).toEqual({ ok: true, value: todos });
     expect(result.current.actions.parseImport('{').ok).toBe(false);
+  });
+
+  it('pauseUndo keeps the removal restorable past 5s; resumeUndo restarts the countdown', () => {
+    vi.useFakeTimers();
+    const todos = [makeTodo()];
+    const { result } = renderStore(storageWith(todos));
+
+    act(() => result.current.actions.remove(todos[0].id));
+    act(() => result.current.actions.pauseUndo());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 3));
+    expect(result.current.pendingUndo).not.toBeNull();
+
+    act(() => result.current.actions.resumeUndo());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS));
+    expect(result.current.pendingUndo).toBeNull();
   });
 
   it('dismissUndo drops the pending removal', () => {

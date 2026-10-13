@@ -5,7 +5,7 @@
 > **Project**: todo-app
 > **Version**: 0.1.0 (pre-init)
 > **Author**: biggsman
-> **Date**: 2026-10-12
+> **Date**: 2026-10-12 (v0.3: 2026-10-13)
 > **Status**: Draft
 > **Planning Doc**: [todo-app.plan.md](../../01-plan/features/todo-app.plan.md)
 
@@ -41,7 +41,7 @@
 - 비즈니스 규칙(정렬·필터·검증·마감 상태)을 React·브라우저 API와 분리해 순수 함수로 테스트한다.
 - 저장소 접근은 `storage/` 한 곳에 모아, 손상 복구·스키마 버전·가져오기 검증을 한 군데서 책임진다.
 - 상태 변경은 하나의 리듀서로 모아 예측 가능하게 하고, 저장은 상태 변경 후 자동으로 일어나게 한다.
-- 추가 런타임 의존성 없이 React만으로 구현한다 (번들 작게, 유지보수 쉽게).
+- 런타임 의존성은 React와 self-hosted 웹폰트(`@fontsource-variable/geist`, `pretendard`)뿐이다 (번들 작게, 유지보수 쉽게). 웹폰트는 module-3에서 사용자 승인으로 추가했고, 외부 CDN 없이 번들에 포함된다 (v0.3).
 
 ### 1.2 Design Principles
 
@@ -88,27 +88,35 @@
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+> v0.3: 정렬·필터 결과(파생 데이터)와 그 조건(query·sortKey)은 저장하지 않는 UI 상태이므로 `state/`가 아니라 `components/useTodoView.ts`가 `useMemo`로 계산한다. 기본 정렬은 마감일순(`dueDate`), 기본 필터는 전체·빈 검색어.
+
 ### 2.2 Data Flow
 
 ```
 입력 → validate(domain) → dispatch(action) → todoReducer → 새 todos 상태
      → useEffect: saveTodos(storage) → localStorage
-     → 화면: filterTodos + sortTodos(domain) → TodoList 렌더
+     → 화면: useTodoView(components) = filterTodos + sortTodos(domain) → TodoList 렌더
 
 앱 시작: loadTodos(storage) → schema 검증
         ├─ 정상 → 초기 상태
-        └─ 손상 → corrupt-backup 키에 원본 보관 → 빈 상태 + 안내 토스트
+        └─ 손상 → corrupt-backup 키에 원본 보관 시도 → 빈 상태 + 안내 토스트
+                ├─ 보관됨 (backupSaved=true)  → STORAGE_CORRUPT 안내
+                └─ 못 함  (backupSaved=false) → STORAGE_CORRUPT_UNSAVED 안내
 ```
+
+**손상 데이터 저장 규칙 (v0.3, G3)**: 손상으로 시작한 뒤에도 `todo-app:v1`의 원본은 시작 시점에 절대 덮어쓰지 않는다(초기 목록은 자동 저장 대상이 아님 — StrictMode 이중 실행 포함). 사용자의 **첫 변경**(추가·수정·완료·삭제·가져오기)이 일어나면 그때부터 평소처럼 자동 저장하며, 이때 원본이 덮어써진다. 원본을 따로 보관하지 못한 경우(`backupSaved=false`)에는 이 사실을 `STORAGE_CORRUPT_UNSAVED` 토스트로 미리 알리므로, 사용자는 변경 전에 개발자 도구 등으로 원본을 꺼낼 기회가 있다.
 
 ### 2.3 Dependencies
 
 | Component | Depends On | Purpose |
 |-----------|-----------|---------|
 | components/* | state, domain(타입·표시용 함수) | UI 렌더, 사용자 입력 |
+| components/useTodoView | domain(sort·filter) | 필터·정렬 조건(UI 상태, 비저장)과 보이는 목록 파생 (v0.3) |
 | state/todoReducer | domain | 상태 전이 |
 | state/TodoContext | state/todoReducer, storage | 초기 로드, 자동 저장, Provider |
 | storage/* | domain(타입·검증) | localStorage 입출력, 스키마 검증, JSON 백업 |
-| theme/useTheme | (브라우저 API) | 테마 결정·저장 |
+| theme/useTheme | (브라우저 API) | 테마 결정·저장, `todo-app:theme` 키 소유 (v0.3) |
+| 웹폰트 (Geist, Pretendard) | npm 패키지, self-hosted | `main.tsx`에서 CSS import, 외부 요청 없음 (v0.3) |
 | domain/* | 없음 | 비즈니스 규칙 |
 
 ---
@@ -128,7 +136,7 @@ export interface Todo {
   priority: Priority;       // 기본 'medium'
   dueDate: string | null;   // 'YYYY-MM-DD' (로컬 날짜, 시간 없음)
   category: string | null;  // 1~30자, 1개
-  tags: string[];           // 소문자·공백 제거·중복 제거, 각 1~20자, 최대 10개
+  tags: string[];           // 소문자·앞뒤 공백 제거(가운데 공백은 유지)·중복 제거, 각 1~20자, 최대 10개 (v0.3)
   createdAt: string;        // ISO 8601
   updatedAt: string;        // ISO 8601
   completedAt: string | null;
@@ -162,9 +170,21 @@ export interface AppError { code: ErrorCode; message: string }
 | Key | Value | Description |
 |-----|-------|-------------|
 | `todo-app:v1` | `{ "schemaVersion": 1, "todos": Todo[] }` | 할 일 데이터 |
-| `todo-app:theme` | `"light"` \| `"dark"` | 수동 선택 테마 (없으면 시스템 설정) |
-| `todo-app:corrupt-backup` | 원본 문자열 | 손상 감지 시 원본 보관 (FR-14) |
-| `todo-app:pre-import-backup` | `{ schemaVersion, todos }` | 가져오기 직전 자동 백업 (FR-13) |
+| `todo-app:theme` | `"light"` \| `"dark"` | 수동 선택 테마 (없으면 시스템 설정). UI 설정이므로 `storage/`가 아니라 `theme/useTheme.ts`와 `index.html` 초기(pre-paint) 스크립트가 관리한다 — 두 곳의 키는 테스트로 일치 확인 (v0.3) |
+| `todo-app:corrupt-backup` | 원본 문자열 | 손상 감지 시 원본 보관 (FR-14). 규칙은 아래 |
+| `todo-app:pre-import-backup` | `{ schemaVersion, todos }` | 가져오기 직전 자동 백업 (FR-13). 규칙은 아래 |
+
+**`todo-app:corrupt-backup` 규칙 (v0.3, G3)**:
+- 키가 비어 있으면 원본을 쓴다. 쓰기 실패 → `backupSaved=false`.
+- 키에 같은 원본이 이미 있으면(변경 없이 새로고침한 경우) 다시 쓰지 않고 `backupSaved=true`.
+- 키에 **다른** 이전 백업이 있으면 덮어쓰지 않는다(이전에 "원본은 따로 보관했습니다"라고 안내한 데이터이므로). 이번 원본은 `backupSaved=false`로 처리해 `STORAGE_CORRUPT_UNSAVED`를 안내한다. 자동 삭제하지 않으며, 지우려면 사용자가 브라우저 사이트 데이터를 정리한다.
+
+**`todo-app:pre-import-backup` 규칙 (v0.3, G11)**: 가져오기를 확정할 때마다 직전 목록으로 **덮어쓴다**(항상 가장 최근 가져오기 직전 1벌만 보관). 앱이 자동으로 지우지 않는다. 쓰기에 실패하면 가져오기를 취소한다(`IMPORT_BACKUP_FAILED`, v0.2).
+
+**schemaVersion 정책 (v0.3, G7)**: 현재 지원 버전은 `1`(`CURRENT_SCHEMA_VERSION`) 하나다.
+- `todo-app:v1`에 지원하지 않는 버전(예: 더 새 버전의 앱이 쓴 `2`, 숫자가 아님, 누락)이 있으면 **손상과 같이 처리**한다: 원본을 `corrupt-backup` 규칙대로 보관하고 빈 목록으로 시작한다(데이터를 추측해 고치지 않음).
+- 가져오기 파일의 지원하지 않는 버전은 `IMPORT_SCHEMA_MISMATCH (schemaVersion)`으로 거부하고 데이터는 바꾸지 않는다.
+- 향후 버전을 올릴 때의 마이그레이션 위치: `storage/schema.ts`의 `parseStoredData`(저장 데이터)와 `storage/backup.ts`의 `parseImportFile`(가져오기)에서, 버전 검사 직후 `migrate(raw, fromVersion) → v최신 형태`를 거친 뒤 `parseTodoList`로 검증한다. 저장 키 이름(`todo-app:v1`)은 바꾸지 않고, 마이그레이션 결과는 첫 저장 때 새 버전으로 기록한다. 마이그레이션 함수는 버전별 순수 함수로 두고 단위 테스트한다.
 
 **Export file** (`todo-app-backup-YYYY-MM-DD.json`):
 ```json
@@ -182,23 +202,30 @@ export interface AppError { code: ErrorCode; message: string }
 | Module | Function | Description | FR |
 |--------|----------|-------------|----|
 | domain/validate | `validateTitle(raw: string): Result<string>` | 공백 제거 후 1~200자 검증 | FR-01, FR-03 |
-| domain/validate | `normalizeTags(raw: string[]): Result<string[]>` | 소문자·trim·중복 제거, 개수·길이 검증 | FR-10 |
+| domain/validate | `normalizeTags(raw: string[]): Result<string[]>` | 소문자·앞뒤 trim(가운데 공백 유지)·빈 값 제거·중복 제거, 개수·길이 검증 | FR-10 |
 | domain/validate | `validateCategory(raw: string): Result<string \| null>` | 빈 값 → null, 1~30자 | FR-10 |
 | domain/todo | `createTodo(input: NewTodoInput, now: Date, id: string): Result<Todo>` | 검증 후 새 Todo 생성 | FR-01, FR-06, FR-07 |
 | domain/todo | `updateTodo(todo: Todo, patch: TodoPatch, now: Date): Result<Todo>` | 수정 + updatedAt 갱신 | FR-03 |
 | domain/todo | `toggleTodo(todo: Todo, now: Date): Todo` | completed·completedAt 전환 | FR-02 |
-| domain/todo | `getDueStatus(todo: Todo, today: string): DueStatus` | 마감 상태 (완료 항목은 'none') | FR-06 |
+| domain/date | `getDueStatus(todo: Todo, today: string): DueStatus` | 마감 상태 (완료 항목은 'none'). v0.3: 위치를 §9.4와 맞춰 `domain/date`로 정정 | FR-06 |
 | domain/sort | `sortTodos(todos: Todo[], key: SortKey): Todo[]` | 새 배열 반환, 안정 정렬, 마감일 없음은 뒤로, 동률은 createdAt 내림차순. `dueDate`·`priority` 정렬에서는 미완료 → 완료 순으로 먼저 나눈다 (v0.2) | FR-08 |
 | domain/filter | `filterTodos(todos: Todo[], query: TodoQuery): Todo[]` | 상태·텍스트·카테고리·태그 AND 조합 | FR-09, FR-10 |
 | domain/filter | `collectCategories(todos)`, `collectTags(todos)` | 사용 중인 값 목록(정렬됨) | FR-10 |
-| storage/schema | `parseStoredData(raw: unknown): Result<Todo[]>` | 스키마 버전·필드 검증 | FR-14 |
-| storage/todoStorage | `loadTodos(storage: Storage): { todos: Todo[]; recovered: boolean }` | 없음 → 빈 배열, 손상 → 백업 후 빈 배열 + recovered=true | FR-05, FR-14 |
-| storage/todoStorage | `saveTodos(storage: Storage, todos: Todo[]): Result<void>` | 용량 초과 시 STORAGE_QUOTA | FR-05 |
+| domain/importFile | `checkImportFileSize(bytes: number): Result<void>`, `MAX_IMPORT_BYTES` | 5MB 초과면 `IMPORT_TOO_LARGE` (UI가 읽기 전에 사용, v0.2) | FR-13 |
+| storage/schema | `parseStoredData(raw: unknown): Result<Todo[]>` | 스키마 버전·필드 검증. 지원하지 않는 schemaVersion도 `STORAGE_CORRUPT` (§3.3 정책) | FR-14 |
+| storage/schema | `parseTodoList(raw: unknown): Result<Todo[], { path: string }>` | Todo 배열 필드 단위 검증, 알 수 없는 필드 제거, id 중복 거부. 실패 시 첫 오류 경로(`todos[2].priority`) (v0.3) | FR-13, FR-14 |
+| storage/schema | `toStoredData(todos: Todo[]): { schemaVersion: 1; todos }` | 저장·가져오기 전 백업 형식 (v0.3) | FR-05 |
+| storage/todoStorage | `loadTodos(storage: Storage): { todos: Todo[]; recovered: boolean; backupSaved: boolean }` | 없음 → 빈 배열, 손상 → 백업 시도 후 빈 배열 + recovered=true. `backupSaved`는 원본이 `corrupt-backup`에 실제로 있는지 (v0.3, §3.3 규칙) | FR-05, FR-14 |
+| storage/todoStorage | `saveTodos(storage: Storage, todos: Todo[]): Result<void>` | 용량 초과 시 `STORAGE_QUOTA`, 그 밖의 쓰기 실패는 `STORAGE_UNAVAILABLE` (v0.3) | FR-05 |
+| storage/todoStorage | `getBrowserStorage(): Storage \| null` | 브라우저 localStorage, 읽기 접근이 막혀 있으면 null (메모리 전용 모드) (v0.3) | FR-05 |
+| storage/todoStorage | `isQuotaExceededError(error: unknown): boolean` | 브라우저별 용량 초과 예외 판별 (v0.3) | FR-05 |
 | storage/backup | `exportTodos(todos: Todo[], now: Date): { filename: string; json: string }` | 내보내기 파일 내용 | FR-13 |
-| storage/backup | `parseImportFile(text: string): Result<Todo[]>` | JSON 파싱·app·schemaVersion·Todo 검증 | FR-13 |
+| storage/backup | `parseImportFile(text: string): Result<Todo[]>` | 크기(이중 방어)·JSON 파싱·app·schemaVersion·Todo 검증. `IMPORT_TOO_LARGE` / `IMPORT_INVALID_JSON` / `IMPORT_SCHEMA_MISMATCH` (§4.2) | FR-13 |
+| storage/backup | `describeSchemaPath(path: string): string` | 오류 위치를 사람이 읽는 한국어로: `todos[2].priority` → `3번째 항목의 priority` (v0.3) | FR-13 |
 | storage/backup | `backupBeforeImport(storage: Storage, todos: Todo[]): Result<void>` | 가져오기 직전 백업. 실패하면 가져오기를 중단하고 안내 (v0.2) | FR-13 |
 | state/todoReducer | `todoReducer(state: TodoState, action: TodoAction): TodoState` | 아래 4.2 액션 처리 | FR-01~04, 12, 13 |
-| state/useUndo | `useUndo(): { pending, offer(removed), undo(), dismiss() }` | 5초 되돌리기 | FR-12 |
+| state/useUndo | `useUndo(): { pending: RemovedItem[] \| null, offer(removed: RemovedItem[]), undo(): RemovedItem[] \| null, dismiss(), pause(), resume() }`, `UNDO_TIMEOUT_MS = 5000` | 5초 되돌리기. `undo()`는 dispatch하지 않고 복원할 항목을 돌려준다(호출 측이 `restore` dispatch). `pause()`는 카운트다운 정지(대기 항목 없으면 무시), `resume()`은 **새로 5초 전체**를 시작(남은 시간 이어가기 아님 — 토스트를 떠나는 순간 바로 사라지는 일이 없도록). 일시정지 중 새 `offer`는 `resume`까지 대기, `dismiss`/`undo`는 일시정지를 해제 (v0.3, G1) | FR-12 |
+| state/TodoContext | `TodoProvider`, `useTodos()`, `useTodoActions()` | §4.3 계약 (v0.3) | FR-01~14 |
 | theme/useTheme | `useTheme(): { theme, toggle() }` | 시스템 기본, 수동 선택 저장 | FR-11 |
 
 ### 4.2 Detailed Specification
@@ -224,11 +251,47 @@ interface TodoState { todos: Todo[] }
 
 #### `parseImportFile(text)`
 
-- 입력: 파일 텍스트 (5MB 초과 파일은 UI에서 먼저 거부)
+- 입력: 파일 텍스트 (5MB 초과 파일은 UI에서 `checkImportFileSize`로 먼저 거부)
 - 성공: `{ ok: true, value: Todo[] }`
 - 실패:
+  - `IMPORT_TOO_LARGE`: 텍스트 길이가 `MAX_IMPORT_BYTES` 초과 (UI 검사를 우회한 경우의 이중 방어, v0.3)
   - `IMPORT_INVALID_JSON`: JSON 파싱 실패
-  - `IMPORT_SCHEMA_MISMATCH`: `app !== 'todo-app'` 또는 지원하지 않는 schemaVersion 또는 Todo 필드 오류 (첫 오류 위치 포함)
+  - `IMPORT_SCHEMA_MISMATCH`: `app !== 'todo-app'` 또는 지원하지 않는 schemaVersion 또는 Todo 필드 오류. 메시지 형식은 `"{§6.1 메시지} ({위치})"` — 위치는 `describeSchemaPath`로 한국어화: 최상위 키는 그대로(`(app)`, `(schemaVersion)`, `(todos)`), 항목은 1부터 센 순번(`(3번째 항목의 priority)`, 항목 자체가 객체가 아니면 `(3번째 항목)`). 파일이 객체가 아니면 위치 없이 기본 메시지 (v0.3, G8)
+
+### 4.3 state/TodoContext 계약 (v0.3)
+
+```typescript
+// state/TodoContext.tsx — components는 storage/를 import할 수 없으므로(§9.3) 모든 저장소 작업은 여기를 거친다.
+interface PendingUndo { reason: 'remove' | 'clearCompleted'; items: RemovedItem[] }  // reason → 토스트 문구
+interface RemovedItem { todo: Todo; index: number }                                   // state/todoReducer
+
+interface StorageStatus {
+  recovered: boolean;        // 손상 데이터로 시작함 (FR-14)
+  backupSaved: boolean;      // recovered일 때: 원본이 corrupt-backup에 있음 (§3.3 규칙, v0.3)
+  unavailable: boolean;      // localStorage 사용 불가 → 메모리 전용
+  saveError: AppError | null; // 마지막 저장 실패, 다음 저장 성공 시 null
+}
+
+function useTodos(): { todos: Todo[]; storageStatus: StorageStatus; pendingUndo: PendingUndo | null };
+
+function useTodoActions(): {
+  add(input: NewTodoInput): Result<Todo>;
+  update(id: string, patch: TodoPatch): Result<void>;   // 없는 id는 no-op(ok)
+  toggle(id: string): void;
+  remove(id: string): void;                              // Undo 슬롯에 offer
+  clearCompleted(): void;                                // Undo 슬롯에 offer
+  exportFile(): { filename: string; json: string };      // storage/backup.exportTodos
+  parseImport(text: string): Result<Todo[]>;             // storage/backup.parseImportFile, 상태 변경 없음
+  importTodos(todos: Todo[]): Result<void>;              // backupBeforeImport 실패 시 교체 없이 오류 반환(v0.2), 성공 시 replaceAll + Undo 해제
+  undo(): void;                                          // useUndo.undo() → restore dispatch
+  dismissUndo(): void;
+  pauseUndo(): void;                                     // = useUndo.pause (v0.3, G1)
+  resumeUndo(): void;                                    // = useUndo.resume (v0.3, G1)
+};
+```
+
+- `TodoProvider({ storage?: Storage | null })`: 기본값은 `getBrowserStorage()`, `null`이면 메모리 전용. 초기 로드는 1회(`loadTodos`), 이후 `todos`가 바뀔 때마다 `saveTodos` (초기 목록은 저장하지 않음 — §2.2 손상 데이터 저장 규칙).
+- 시계(`new Date()`)와 id(`crypto.randomUUID()`)는 Provider에서만 만든다 (domain·reducer는 순수).
 
 ---
 
@@ -280,7 +343,11 @@ interface TodoState { todos: Todo[] }
 | `TodoItem` | src/components/TodoItem.tsx | 체크, 제목, 배지, 수정·삭제 버튼 |
 | `TodoEditor` | src/components/TodoEditor.tsx | 인라인 편집 |
 | `Footer` | src/components/Footer.tsx | 남은 개수, 완료 항목 삭제 |
-| `Toast` | src/components/Toast.tsx | Undo·오류·안내 메시지 (`aria-live="polite"`) |
+| `Toast` | src/components/Toast.tsx | 토스트 영역(`aria-live="polite"`): 오류·안내 메시지 + `UndoToast` |
+| `UndoToast` | src/components/UndoToast.tsx | 되돌리기 토스트. hover·focus-within 동안 카운트다운 정지 (v0.3, G1) |
+| `ConfirmDialog` | src/components/ConfirmDialog.tsx | 네이티브 `<dialog>` 확인 대화상자 (가져오기 덮어쓰기, v0.3 등록) |
+| `TodoBadges` | src/components/TodoBadges.tsx | 우선순위·마감·카테고리·태그 배지 (v0.3 등록) |
+| `icons/*` | src/components/icons/ | `Icon` 기반 SVG 아이콘 17개 (v0.3 등록) |
 | `DataMenu` | src/components/DataMenu.tsx | 내보내기, 가져오기, 확인 대화상자 |
 | `ThemeToggle` | src/components/ThemeToggle.tsx | 라이트/다크 전환 |
 
@@ -298,23 +365,24 @@ interface TodoState { todos: Todo[] }
 - [ ] Select: 우선순위 3개 옵션 (높음/보통/낮음, 기본 보통)
 - [ ] Input: 카테고리 (기존 카테고리 datalist 제안)
 - [ ] TagInput: 태그 칩 (최대 10개)
-- [ ] Tabs: 상태 필터 3개 (전체/진행 중/완료)
+- [ ] Toggle group: 상태 필터 3개 (전체/진행 중/완료) — 패널 전환이 아닌 필터이므로 ARIA Tabs 대신 `role="group"` + `aria-pressed` 토글 버튼 (v0.3)
 - [ ] Input: 검색 (`type="search"`, 제목·태그 대상)
 - [ ] Select: 카테고리 필터 ("전체" + 사용 중 카테고리)
 - [ ] Select: 태그 필터 ("전체" + 사용 중 태그)
-- [ ] Select: 정렬 3개 옵션 (마감일순/우선순위순/최신순)
+- [ ] Select: 정렬 3개 옵션 (마감일순/우선순위순/최신순, 기본 마감일순)
+- [ ] Responsive: 480px 이하에서 카테고리·태그·정렬은 "필터" 토글 버튼 아래로 접힘(적용 개수 표시), 검색은 항상 보임 (v0.3)
 - [ ] List item: 완료 체크박스
 - [ ] List item: 제목 (완료 시 취소선·흐리게)
 - [ ] Badge: 우선순위 (높음=강조색, 보통=중립, 낮음=약함)
 - [ ] Badge: 마감 (지남=빨강 "N일 지남", 오늘=주황 "오늘", 이후=날짜)
 - [ ] Badge: 카테고리, 태그 칩
 - [ ] Button: 수정, 삭제 (아이콘 버튼 + aria-label)
-- [ ] Empty state: 할 일 없음 / 검색 결과 없음 문구 구분
+- [ ] Empty state: "할 일이 없습니다. 위에서 추가해 보세요" / "조건에 맞는 할 일이 없습니다" + "필터 초기화" 버튼 (v0.3)
 - [ ] Footer: 남은 할 일 개수 "남은 일 N개"
 - [ ] Button: 완료 항목 삭제 (완료 항목 0개면 비활성)
-- [ ] Toast: 삭제 후 "되돌리기" 버튼 (5초)
-- [ ] Toast: 저장 실패·데이터 복구·가져오기 결과 안내
-- [ ] Dialog: 가져오기 덮어쓰기 확인 ("현재 N개를 가져온 M개로 바꿉니다")
+- [ ] Toast: 삭제 후 "삭제됨" / 일괄 삭제 후 "완료 항목 N개 삭제됨" + "되돌리기" 버튼 + 닫기(aria-label "알림 닫기"). 5초 후 사라짐. **토스트에 포인터가 올라가 있거나 포커스가 안에 있는 동안은 멈추고, 둘 다 벗어나면 새로 5초** (v0.3, G1 — WCAG 2.2.1)
+- [ ] Toast: 저장 실패·데이터 복구·가져오기 결과 안내. 지속 규칙: 성공(예: "N개를 가져왔습니다")은 5초 후 사라짐, 오류는 사용자가 닫을 때까지 유지, 같은 문구는 중복 표시 안 함, 최대 3개 (v0.3)
+- [ ] Dialog: 가져오기 덮어쓰기 확인 — 제목 "데이터 가져오기", 본문 "현재 N개를 가져온 M개로 바꿉니다", 보조 문구 "바꾸기 직전의 데이터는 이 브라우저에 자동으로 백업됩니다.", 버튼 "취소"(초기 포커스)·"바꾸기", Esc = 취소 (v0.3)
 - [ ] Notice: "데이터는 이 브라우저에만 저장됩니다" (푸터 작은 글씨)
 
 ---
@@ -330,11 +398,12 @@ interface TodoState { todos: Todo[] }
 | `INVALID_TAG` | 태그는 20자 이하, 최대 10개입니다 | 태그 규칙 위반 | 칩 추가 거부 + 인라인 안내 |
 | `INVALID_CATEGORY` | 카테고리는 30자 이하입니다 | 길이 초과 | 인라인 안내 |
 | `STORAGE_QUOTA` | 저장 공간이 부족해 저장하지 못했습니다. 내보내기로 백업하세요 | localStorage 용량 초과 | 토스트, 상태는 유지 |
-| `STORAGE_UNAVAILABLE` | 이 브라우저에서는 저장할 수 없습니다 (시크릿 모드 등) | localStorage 접근 불가 | 시작 시 1회 안내, 메모리로만 동작 |
-| `STORAGE_CORRUPT` | 저장된 데이터가 손상되어 새로 시작합니다. 원본은 따로 보관했습니다 | 스키마 검증 실패 | 백업 키 저장 후 빈 상태 |
+| `STORAGE_UNAVAILABLE` | 이 브라우저에서는 저장할 수 없습니다 (시크릿 모드 등) | localStorage 접근 불가, 또는 용량 외 이유의 저장 실패 (v0.3) | 시작 시 1회 안내, 메모리로만 동작 / 저장 실패 시 토스트 |
+| `STORAGE_CORRUPT` | 저장된 데이터가 손상되어 새로 시작합니다. 원본은 따로 보관했습니다 | 스키마 검증 실패 또는 지원하지 않는 schemaVersion (§3.3) | 원본이 `corrupt-backup`에 있음(`backupSaved=true`), 빈 상태 |
+| `STORAGE_CORRUPT_UNSAVED` | 저장된 데이터가 손상되어 새로 시작합니다. 원본을 따로 보관하지 못해, 할 일을 추가하거나 바꾸면 원본이 사라집니다 | 손상 + 백업 쓰기 실패, 또는 다른 이전 백업이 키를 차지 (v0.3, G3) | 빈 상태, `todo-app:v1` 원본은 첫 사용자 변경 전까지 그대로 (§2.2) |
 | `IMPORT_INVALID_JSON` | 올바른 JSON 파일이 아닙니다 | 파싱 실패 | 토스트, 데이터 변경 없음 |
-| `IMPORT_SCHEMA_MISMATCH` | todo-app 백업 파일이 아니거나 형식이 맞지 않습니다 | 검증 실패 | 토스트, 데이터 변경 없음 |
-| `IMPORT_TOO_LARGE` | 5MB 이하 파일만 가져올 수 있습니다 | 파일 크기 | 읽기 전 거부 |
+| `IMPORT_SCHEMA_MISMATCH` | todo-app 백업 파일이 아니거나 형식이 맞지 않습니다 | 검증 실패 | 토스트(뒤에 ` (위치)` 덧붙임, §4.2), 데이터 변경 없음 |
+| `IMPORT_TOO_LARGE` | 5MB 이하 파일만 가져올 수 있습니다 | 파일 크기 | 읽기 전 거부 (`parseImportFile`도 이중 방어로 반환) |
 | `IMPORT_BACKUP_FAILED` | 현재 데이터를 백업하지 못해 가져오기를 취소했습니다. 기존 데이터는 그대로입니다 | 가져오기 직전 백업 쓰기 실패 (v0.2) | 가져오기 중단, 데이터 변경 없음 |
 
 ### 6.2 Error Response Format
@@ -342,6 +411,8 @@ interface TodoState { todos: Todo[] }
 ```typescript
 // 모든 실패는 Result로 반환 (예외 throw 금지, 단 개발자 오류는 예외)
 { ok: false, error: { code: 'IMPORT_SCHEMA_MISMATCH', message: 'todo-app 백업 파일이 아니거나 형식이 맞지 않습니다' } }
+// v0.3: 위치를 알 수 있으면 덧붙인다 (§4.2)
+{ ok: false, error: { code: 'IMPORT_SCHEMA_MISMATCH', message: 'todo-app 백업 파일이 아니거나 형식이 맞지 않습니다 (3번째 항목의 priority)' } }
 ```
 
 ---
@@ -370,6 +441,8 @@ interface TodoState { todos: Todo[] }
 
 커버리지 목표: `src/domain`, `src/storage`, `src/state` 합산 ≥ 80% (line·branch).
 
+E2E 실행 (v0.3): `npm run test:e2e` — `playwright.config.ts`가 `npm run build && vite preview --port 4181 --strictPort`로 프로덕션 빌드를 띄우고, Playwright 브라우저를 내려받지 않고 PC에 설치된 Chrome(`channel: 'chrome'`, locale `ko-KR`)으로 `e2e/`를 실행한다.
+
 ### 8.2 L1: Unit Test Scenarios
 
 | # | Target | Test Description | Expected |
@@ -382,13 +455,13 @@ interface TodoState { todos: Todo[] }
 | 6 | sortTodos('dueDate') | 마감 섞임 + null | 오름차순, null 맨 뒤, 원본 배열 불변 |
 | 7 | sortTodos('priority') | high/low/medium, 동률 | high→medium→low, 동률은 최신 먼저 |
 | 8 | filterTodos | status×text×category×tag 조합 | AND 조건, 대소문자 무시, 태그 텍스트 매칭 |
-| 9 | loadTodos | 키 없음 / 정상 / 깨진 JSON / 필드 누락 | [] / todos / recovered + corrupt-backup 저장 |
+| 9 | loadTodos | 키 없음 / 정상 / 깨진 JSON / 필드 누락 / 백업 쓰기 실패 / 같은 백업 존재 / 다른 백업 존재 | [] / todos / recovered + backupSaved + corrupt-backup 저장 / backupSaved=false / 다시 쓰지 않음·true / 기존 유지·false (v0.3) |
 | 10 | saveTodos | QuotaExceededError 발생 Storage | STORAGE_QUOTA |
 | 11 | exportTodos → parseImportFile | 왕복 | 동일 todos |
 | 12 | parseImportFile | 잘못된 JSON / 다른 app / schemaVersion 2 / 필드 오류 | 각 오류 코드 |
 | 13 | todoReducer | add/update/toggle/remove/clearCompleted/restore/replaceAll, 없는 id | 기대 상태, 없는 id는 동일 참조 반환 |
 | 14 | todoReducer restore | 중간 index 2개 삭제 후 복원 | 원래 순서 복구 |
-| 15 | useUndo | offer 후 5초 경과 / 그 전 undo | pending 해제 / restore 호출 |
+| 15 | useUndo | offer 후 5초 경과 / 그 전 undo / pause 후 장시간 / resume 후 5초 / 일시정지 중 offer·undo·dismiss | pending 해제 / 항목 반환 / 유지 / 새 5초 후 해제 / §4.1 규칙대로 (v0.3) |
 
 ### 8.3 L2: UI Action Test Scenarios
 
@@ -403,7 +476,8 @@ interface TodoState { todos: Todo[] }
 | 7 | Main | "완료" 탭 + 검색어 | 조건 맞는 항목만 | 결과 없음 문구 구분 |
 | 8 | Main | 정렬 "우선순위순" | 높음이 맨 위 | - |
 | 9 | Main | 테마 토글 | `html[data-theme]` 변경 | theme 키 저장 |
-| 10 | Main | 손상 데이터로 시작 | 안내 토스트, 빈 목록 | corrupt-backup 존재 |
+| 10 | Main | 손상 데이터로 시작 | 안내 토스트, 빈 목록 / 백업 실패 시 STORAGE_CORRUPT_UNSAVED 문구 (v0.3) | corrupt-backup 존재 / `todo-app:v1` 원본 유지 |
+| 11 | Main | 되돌리기 토스트 hover·focus | 머무는 동안 사라지지 않음, 벗어나면 새로 5초 후 사라짐, 그 사이 되돌리기 동작 (v0.3, G1) | - |
 
 ### 8.4 L3: E2E Scenario Test Scenarios
 
@@ -415,6 +489,7 @@ interface TodoState { todos: Todo[] }
 | 4 | 모바일 | 360×740 뷰포트에서 추가·필터·편집 | 가로 스크롤 없음, 모든 버튼 접근 가능 |
 | 5 | 키보드 | Tab/Enter/Space/Esc만으로 추가·완료·편집·삭제 | 마우스 없이 완료 |
 | 6 | 다크 모드 | 시스템 다크 에뮬레이션 → 첫 로드 → 토글 → 새로고침 | 다크로 시작, 수동 선택 유지 |
+| 7 | 되돌리기 토스트 일시정지 | `page.clock` 설치 → 삭제 → 토스트 hover 15초 → 버튼 focus 15초 → 포커스 밖으로 | 머무는 동안 유지, 떠난 뒤 5초 안팎에 사라짐 (v0.3, G1) |
 
 ### 8.5 Seed Data Requirements
 
@@ -469,13 +544,16 @@ Rule: domain은 React·window·localStorage를 import하지 않는다.
 | sortTodos | Domain | `src/domain/sort.ts` |
 | filterTodos, collect* | Domain | `src/domain/filter.ts` |
 | getDueStatus, 날짜 유틸 | Domain | `src/domain/date.ts` |
+| ERROR_MESSAGES, ok/fail/makeError | Domain | `src/domain/errors.ts` (v0.3 등록) |
+| MAX_IMPORT_BYTES, checkImportFileSize | Domain | `src/domain/importFile.ts` (v0.2, v0.3 등록) |
 | parseStoredData | Infrastructure | `src/storage/schema.ts` |
 | loadTodos, saveTodos | Infrastructure | `src/storage/todoStorage.ts` |
 | exportTodos, parseImportFile, backupBeforeImport | Infrastructure | `src/storage/backup.ts` |
 | todoReducer | Application | `src/state/todoReducer.ts` |
 | TodoProvider, useTodos, useTodoActions | Application | `src/state/TodoContext.tsx` |
 | useUndo | Application | `src/state/useUndo.ts` |
-| 화면 컴포넌트 | Presentation | `src/components/*.tsx` |
+| 화면 컴포넌트 | Presentation | `src/components/*.tsx` (UndoToast, ConfirmDialog, TodoBadges, icons/ 포함) |
+| UI 전용 훅·헬퍼 (비저장) | Presentation | `src/components/useTodoView.ts`(필터·정렬 파생), `useNotices.ts`(안내 토스트), `useStorageNotices.ts`(저장 상태 → 토스트), `todoFocus.ts`(삭제·복원 후 포커스), `downloadFile.ts`(파일 다운로드), `todoDetails.ts`(세부 입력 값 변환) (v0.3 등록) |
 | useTheme | Presentation | `src/theme/useTheme.ts` |
 
 ---
@@ -510,6 +588,8 @@ import type { Todo } from '@/domain/todo'
 import styles from './TodoItem.module.css'
 ```
 
+> 예외 (v0.3): `src/main.tsx`는 전역 CSS(웹폰트 → `theme.css` → `index.css`)를 `App`보다 먼저 import한다. 그래야 컴포넌트 CSS Module이 번들에서 전역 규칙 뒤에 놓여 같은 우선순위에서 이긴다. 이유는 파일 상단 주석에 남긴다.
+
 ### 10.3 Environment Variables
 
 없음. (필요 시 `VITE_` 접두사)
@@ -540,14 +620,15 @@ todo-app/
 ├── e2e/                         todo.spec.ts
 └── src/
     ├── main.tsx, App.tsx, App.module.css
-    ├── domain/                  todo.ts, validate.ts, date.ts, sort.ts, filter.ts (+ *.test.ts)
+    ├── domain/                  todo.ts, validate.ts, date.ts, sort.ts, filter.ts, errors.ts, importFile.ts (+ *.test.ts)
     ├── storage/                 schema.ts, todoStorage.ts, backup.ts (+ *.test.ts)
     ├── state/                   todoReducer.ts, TodoContext.tsx, useUndo.ts (+ *.test.ts)
     ├── components/              Header, TodoInput, TodoDetailsFields, TagInput, FilterBar,
-    │                            TodoList, TodoItem, TodoEditor, Footer, Toast, DataMenu,
-    │                            ThemeToggle (+ *.module.css, 주요 *.test.tsx)
+    │                            TodoList, TodoItem, TodoEditor, Footer, Toast, UndoToast, DataMenu,
+    │                            ConfirmDialog, TodoBadges, ThemeToggle, icons/ (+ *.module.css, 주요 *.test.tsx)
+    │                            useTodoView, useNotices, useStorageNotices, todoFocus, downloadFile, todoDetails (UI 전용)
     ├── theme/                   useTheme.ts, theme.css
-    └── test/                    setup.ts, factories.ts
+    └── test/                    setup.ts, factories.ts, fakeStorage.ts, matchMedia.ts
 ```
 
 ### 11.2 Implementation Order
@@ -596,3 +677,4 @@ todo-app/
 |---------|------|---------|--------|
 | 0.1 | 2026-10-12 | Initial draft — Option C 선택 (Checkpoint 3) | biggsman |
 | 0.2 | 2026-10-13 | module-5 결정 반영: 마감일·우선순위 정렬 시 완료 항목은 뒤로, `backupBeforeImport`가 `Result` 반환(실패 시 가져오기 중단), 파일 크기 상수 `MAX_IMPORT_BYTES`는 domain으로 이동, 오류 코드 `IMPORT_BACKUP_FAILED` 추가 | biggsman |
+| 0.3 | 2026-10-13 | Check(분석 v0.1) 반영: §4.1 `getDueStatus` 위치(domain/date)·storage 보조 함수·`saveTodos`의 `STORAGE_UNAVAILABLE`·`parseImportFile`의 `IMPORT_TOO_LARGE`와 한국어 오류 위치(G8), `useUndo` 전체 시그니처 + `pause/resume`(새 5초, G1), §4.3 TodoContext 계약 신설, `loadTodos.backupSaved` + `STORAGE_CORRUPT_UNSAVED` + 손상 데이터 저장 규칙·corrupt-backup 비덮어쓰기(G3), schemaVersion 정책·마이그레이션 위치(G7), 태그 앞뒤 공백만 제거(G10), pre-import-backup 덮어쓰기·자동 삭제 없음(G11), theme 키 소유, useTodoView 파생·기본 마감일순, 추가 모듈 등록, §5.4 토글 그룹·필터 초기화·480px 접힘·토스트 규칙·대화상자 문구, 웹폰트 의존성 허용(G5), E2E 명령·포트·채널, main.tsx import 순서 예외(G9), 테스트 계획 #9·#15·L2 #11·L3 #7 | biggsman |

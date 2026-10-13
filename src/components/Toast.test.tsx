@@ -198,3 +198,102 @@ describe('Focus after pointer actions', () => {
     expect(screen.getByRole('textbox', { name: '할 일 제목' })).not.toHaveFocus();
   });
 });
+
+describe('Undo toast countdown pauses on hover and focus (G1, WCAG 2.2.1)', () => {
+  function undoToast(): HTMLElement {
+    return screen.getByText('삭제됨').closest('div')!;
+  }
+
+  function renderWithOneDeleted() {
+    vi.useFakeTimers();
+    render(<App storage={storageWith([makeTodo({ title: '청소' })])} />);
+    fireEvent.click(deleteButtonOf('청소'));
+  }
+
+  it('stays while hovered and dismisses a full 5s after the pointer leaves', () => {
+    renderWithOneDeleted();
+
+    fireEvent.pointerEnter(undoToast());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 3));
+    expect(screen.getByRole('button', { name: '되돌리기' })).toBeInTheDocument();
+
+    fireEvent.pointerLeave(undoToast());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS - 1));
+    expect(screen.getByRole('button', { name: '되돌리기' })).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByRole('button', { name: '되돌리기' })).not.toBeInTheDocument();
+  });
+
+  it('stays while focus is anywhere inside, and restarts when focus leaves the toast', () => {
+    renderWithOneDeleted();
+    const undoButton = screen.getByRole('button', { name: '되돌리기' });
+    const closeButton = within(undoToast()).getByRole('button', { name: '알림 닫기' });
+    const titleInput = screen.getByRole('textbox', { name: '할 일 제목' });
+
+    act(() => undoButton.focus());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 2));
+    // Moving between the toast's own buttons is not leaving it.
+    act(() => closeButton.focus());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 2));
+    expect(screen.getByText('삭제됨')).toBeInTheDocument();
+
+    act(() => titleInput.focus());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS - 1));
+    expect(screen.getByText('삭제됨')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByText('삭제됨')).not.toBeInTheDocument();
+  });
+
+  it('keeps waiting while focused even after the pointer leaves', () => {
+    renderWithOneDeleted();
+
+    fireEvent.pointerEnter(undoToast());
+    act(() => screen.getByRole('button', { name: '되돌리기' }).focus());
+    fireEvent.pointerLeave(undoToast());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 2));
+
+    expect(screen.getByText('삭제됨')).toBeInTheDocument();
+  });
+
+  it('undo still restores the todo after a long hover', () => {
+    renderWithOneDeleted();
+
+    fireEvent.pointerEnter(undoToast());
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS * 4));
+    fireEvent.click(screen.getByRole('button', { name: '되돌리기' }));
+
+    expect(listTitles()).toEqual(['청소']);
+  });
+
+  it('a toast that vanished while hovered does not leave the next one paused', () => {
+    vi.useFakeTimers();
+    render(<App storage={storageWith([makeTodo({ title: '하나' }), makeTodo({ title: '둘' })])} />);
+
+    fireEvent.click(deleteButtonOf('하나'));
+    fireEvent.pointerEnter(undoToast());
+    fireEvent.click(screen.getByRole('button', { name: '되돌리기' }));
+    expect(screen.queryByText('삭제됨')).not.toBeInTheDocument();
+
+    fireEvent.click(deleteButtonOf('둘'));
+    act(() => vi.advanceTimersByTime(UNDO_TIMEOUT_MS));
+    expect(screen.queryByText('삭제됨')).not.toBeInTheDocument();
+  });
+});
+
+describe('Corrupt data whose original could not be kept aside (G3)', () => {
+  it('warns that the original was not saved, instead of claiming it was', () => {
+    const storage = new QuotaExceededStorage({ [STORAGE_KEY]: 'not json' });
+
+    render(<App storage={storage} />);
+
+    expect(
+      screen.getByText(
+        '저장된 데이터가 손상되어 새로 시작합니다. 원본을 따로 보관하지 못해, 할 일을 추가하거나 바꾸면 원본이 사라집니다',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('저장된 데이터가 손상되어 새로 시작합니다. 원본은 따로 보관했습니다'),
+    ).not.toBeInTheDocument();
+    expect(storage.getItem(STORAGE_KEY)).toBe('not json');
+  });
+});

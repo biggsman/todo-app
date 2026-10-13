@@ -126,10 +126,12 @@
   --color-border: rgb(255 255 255 / 0.08);
   --color-border-strong: rgb(255 255 255 / 0.2);
 
-  /* contrast on --color-surface: 15.6 / 7.5 / 5.3 (subtle on sunken/hover ≥ 4.7) */
+  /* contrast on --color-surface: 15.6 / 7.5 / 6.2. Subtle (v0.3, was #8a8a94 = 4.17 on raised)
+     on every dark surface: bg 6.7, sunken 5.8, raised 4.9, hover over surface 5.5, hover over
+     sunken 5.1, hover over hover 4.8 — all >= 4.5 */
   --color-text: #ededf0;
   --color-text-muted: #a5a5ae;
-  --color-text-subtle: #8a8a94;
+  --color-text-subtle: #96969f;
 
   /* #8f9bff on surface 7.2:1; dark text on accent 7.8:1 */
   --color-accent: #8f9bff;
