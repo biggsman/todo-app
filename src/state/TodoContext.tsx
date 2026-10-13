@@ -14,6 +14,8 @@ import {
   useRef,
   useState,
 } from 'react';
+import { mergeTodos } from '@/domain/merge';
+import type { MergeSummary } from '@/domain/merge';
 import { ok } from '@/domain/errors';
 import { createTodo, updateTodo } from '@/domain/todo';
 import { backupBeforeImport, exportTodos, parseImportFile } from '@/storage/backup';
@@ -71,7 +73,8 @@ export interface TodoActions {
    * Replaces all todos with already-validated imported ones. The current list is backed up first;
    * if that backup fails, nothing is replaced and the error is returned (§4.1 v0.2).
    */
-  importTodos: (todos: Todo[]) => Result<void>;
+  /** Merges the imported todos into the current list (by id, newer `updatedAt` wins). */
+  importTodos: (todos: Todo[]) => Result<MergeSummary>;
   undo: () => void;
   dismissUndo: () => void;
   /** Stops the Undo countdown while the toast is hovered or focused (§4.1 v0.3, WCAG 2.2.1). */
@@ -163,17 +166,18 @@ export function TodoProvider({ children, storage: storageProp }: TodoProviderPro
         return parseImportFile(text);
       },
       importTodos(imported) {
-        // Plan SC: FR-13 — current data is copied aside before the import replaces it, and a
+        // Plan SC: FR-13 — current data is copied aside before the import is merged in, and a
         // failed backup cancels the import. Without storage there is nothing persisted to protect
         // (the app runs in memory only), so the confirmed import goes ahead.
         if (storage) {
           const backup = backupBeforeImport(storage, todosRef.current);
           if (!backup.ok) return backup;
         }
-        dispatch({ type: 'replaceAll', todos: imported });
-        // Restoring old positions into a replaced list would mix the two data sets.
+        const merged = mergeTodos(todosRef.current, imported);
+        dispatch({ type: 'replaceAll', todos: merged.todos });
+        // Restoring old positions into a rebuilt list would mix the two data sets.
         dismiss();
-        return ok(undefined);
+        return ok({ added: merged.added, updated: merged.updated });
       },
       undo() {
         const items = undo();

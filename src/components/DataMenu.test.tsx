@@ -140,7 +140,7 @@ describe('DataMenu import (FR-13)', () => {
     vi.restoreAllMocks();
   });
 
-  it('confirms the overwrite, replaces the list, backs up and reports the count', async () => {
+  it('confirms the merge, keeps current todos, backs up and reports the counts', async () => {
     const current = [makeTodo({ title: '기존 1' }), makeTodo({ title: '기존 2' })];
     const imported = makeFixtureTodos();
     const storage = storageWith(current);
@@ -149,16 +149,18 @@ describe('DataMenu import (FR-13)', () => {
     chooseFile(jsonFile(exportText(imported)));
 
     const dialog = await screen.findByRole('dialog', { name: '데이터 가져오기' });
-    expect(dialog).toHaveAccessibleDescription('현재 2개를 가져온 8개로 바꿉니다');
+    expect(dialog).toHaveAccessibleDescription(
+      '새 할 일 8개를 추가하고, 0개를 더 최신 내용으로 바꿉니다',
+    );
     expect(within(dialog).getByRole('button', { name: '취소' })).toHaveFocus();
     expect(storedTodos(storage)).toEqual(current);
 
-    fireEvent.click(within(dialog).getByRole('button', { name: '바꾸기' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '합치기' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(storedTodos(storage)).toEqual(imported);
+    expect(storedTodos(storage)).toEqual([...current, ...imported]);
     expect(JSON.parse(storage.getItem(PRE_IMPORT_BACKUP_KEY) ?? '').todos).toEqual(current);
-    expect(screen.getByText('8개를 가져왔습니다')).toBeInTheDocument();
+    expect(screen.getByText('8개 추가, 0개 갱신했습니다')).toBeInTheDocument();
     expect(menuButton()).toHaveFocus();
   });
 
@@ -237,7 +239,7 @@ describe('DataMenu import (FR-13)', () => {
     render(<App storage={storage} />);
 
     chooseFile(jsonFile(exportText(makeFixtureTodos())));
-    fireEvent.click(await screen.findByRole('button', { name: '바꾸기' }));
+    fireEvent.click(await screen.findByRole('button', { name: '합치기' }));
 
     expect(screen.getByText(BACKUP_FAILED_MESSAGE)).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: '기존' })).toBeInTheDocument();

@@ -2,6 +2,8 @@
 // 가져오기 picks a file → size check → validation → overwrite confirmation → replace.
 // Components may not import storage/ (§9.3), so export/parse/import go through useTodoActions.
 import { useEffect, useId, useRef, useState } from 'react';
+import { mergeTodos } from '@/domain/merge';
+import type { MergeSummary } from '@/domain/merge';
 import { makeError } from '@/domain/errors';
 import { checkImportFileSize } from '@/domain/importFile';
 import { useTodoActions, useTodos } from '@/state/TodoContext';
@@ -120,7 +122,7 @@ export function DataMenu({ onNotify }: DataMenuProps) {
     triggerRef.current?.focus();
     onNotify(
       result.ok
-        ? { tone: 'success', message: `${pendingImport.length}개를 가져왔습니다` }
+        ? { tone: 'success', message: describeMerge(result.value) }
         : { tone: 'error', message: result.error.message },
     );
   }
@@ -186,7 +188,7 @@ export function DataMenu({ onNotify }: DataMenuProps) {
             <span className={styles.itemText}>
               가져오기
               <span className={styles.itemHint} aria-hidden="true">
-                백업 파일로 바꾸기
+                백업 파일과 합치기
               </span>
             </span>
           </button>
@@ -204,12 +206,12 @@ export function DataMenu({ onNotify }: DataMenuProps) {
       />
 
       {pendingImport && (
-        // Plan SC: FR-13 — nothing is replaced until the user confirms the overwrite
+        // Plan SC: FR-13 — nothing changes until the user confirms the merge
         <ConfirmDialog
           title="데이터 가져오기"
-          message={`현재 ${todos.length}개를 가져온 ${pendingImport.length}개로 바꿉니다`}
-          detail="바꾸기 직전의 데이터는 이 브라우저에 자동으로 백업됩니다."
-          confirmLabel="바꾸기"
+          message={describeMergePreview(mergeTodos(todos, pendingImport))}
+          detail="같은 할 일은 더 최근에 수정된 쪽을 남깁니다. 합치기 직전의 데이터는 이 브라우저에 자동으로 백업됩니다."
+          confirmLabel="합치기"
           onConfirm={handleConfirmImport}
           onCancel={handleCancelImport}
         />
@@ -220,4 +222,15 @@ export function DataMenu({ onNotify }: DataMenuProps) {
 
 function menuItems(menu: HTMLElement | null): HTMLElement[] {
   return menu ? Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]')) : [];
+}
+
+function describeMergePreview({ added, updated }: MergeSummary): string {
+  if (added === 0 && updated === 0)
+    return '가져온 파일에 새로운 내용이 없습니다. 목록은 그대로입니다';
+  return `새 할 일 ${added}개를 추가하고, ${updated}개를 더 최신 내용으로 바꿉니다`;
+}
+
+function describeMerge({ added, updated }: MergeSummary): string {
+  if (added === 0 && updated === 0) return '새로운 내용이 없어 목록이 그대로입니다';
+  return `${added}개 추가, ${updated}개 갱신했습니다`;
 }

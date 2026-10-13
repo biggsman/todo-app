@@ -263,7 +263,7 @@ describe('TodoProvider actions', () => {
     expect(result.current.pendingUndo).toBeNull();
   });
 
-  it('importTodos replaces, persists and drops a pending undo', () => {
+  it('importTodos merges, persists and drops a pending undo', () => {
     vi.useFakeTimers();
     const current = [makeTodo({ title: '기존' }), makeTodo()];
     const imported = makeFixtureTodos();
@@ -274,9 +274,11 @@ describe('TodoProvider actions', () => {
     act(() => result.current.actions.importTodos(imported));
     act(() => result.current.actions.undo());
 
-    expect(result.current.todos).toEqual(imported);
+    // current[0] was removed before the import, so the merge keeps current[1] and appends the rest
+    const merged = [current[1], ...imported];
+    expect(result.current.todos).toEqual(merged);
     expect(result.current.pendingUndo).toBeNull();
-    expect(storedTodos(storage)).toEqual(imported);
+    expect(storedTodos(storage)).toEqual(merged);
   });
 
   it('importTodos creates the pre-import backup of the current list', () => {
@@ -287,7 +289,7 @@ describe('TodoProvider actions', () => {
     act(() => {
       expect(result.current.actions.importTodos(makeFixtureTodos())).toEqual({
         ok: true,
-        value: undefined,
+        value: { added: 8, updated: 0 },
       });
     });
 
@@ -325,7 +327,7 @@ describe('TodoProvider actions', () => {
     expect(result.current.todos).toEqual(current);
   });
 
-  it('importTodos replaces in memory when storage is unavailable', () => {
+  it('importTodos merges in memory when storage is unavailable', () => {
     const { result } = renderStore(null);
     const imported = makeFixtureTodos();
 

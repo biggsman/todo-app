@@ -223,6 +223,7 @@ export interface AppError { code: ErrorCode; message: string }
 | storage/backup | `parseImportFile(text: string): Result<Todo[]>` | 크기(이중 방어)·JSON 파싱·app·schemaVersion·Todo 검증. `IMPORT_TOO_LARGE` / `IMPORT_INVALID_JSON` / `IMPORT_SCHEMA_MISMATCH` (§4.2) | FR-13 |
 | storage/backup | `describeSchemaPath(path: string): string` | 오류 위치를 사람이 읽는 한국어로: `todos[2].priority` → `3번째 항목의 priority` (v0.3) | FR-13 |
 | storage/backup | `backupBeforeImport(storage: Storage, todos: Todo[]): Result<void>` | 가져오기 직전 백업. 실패하면 가져오기를 중단하고 안내 (v0.2) | FR-13 |
+| domain/merge | `mergeTodos(current: Todo[], incoming: Todo[]): { todos, added, updated }` | 가져오기는 덮어쓰기가 아니라 id 기준 합치기. 같은 id는 `updatedAt`이 더 최근인 쪽, 동률은 현재 것 유지, 새 항목은 뒤에 추가, 삭제는 전파하지 않음 (v0.4) | FR-13 |
 | state/todoReducer | `todoReducer(state: TodoState, action: TodoAction): TodoState` | 아래 4.2 액션 처리 | FR-01~04, 12, 13 |
 | state/useUndo | `useUndo(): { pending: RemovedItem[] \| null, offer(removed: RemovedItem[]), undo(): RemovedItem[] \| null, dismiss(), pause(), resume() }`, `UNDO_TIMEOUT_MS = 5000` | 5초 되돌리기. `undo()`는 dispatch하지 않고 복원할 항목을 돌려준다(호출 측이 `restore` dispatch). `pause()`는 카운트다운 정지(대기 항목 없으면 무시), `resume()`은 **새로 5초 전체**를 시작(남은 시간 이어가기 아님 — 토스트를 떠나는 순간 바로 사라지는 일이 없도록). 일시정지 중 새 `offer`는 `resume`까지 대기, `dismiss`/`undo`는 일시정지를 해제 (v0.3, G1) | FR-12 |
 | state/TodoContext | `TodoProvider`, `useTodos()`, `useTodoActions()` | §4.3 계약 (v0.3) | FR-01~14 |
@@ -678,3 +679,4 @@ todo-app/
 | 0.1 | 2026-10-12 | Initial draft — Option C 선택 (Checkpoint 3) | biggsman |
 | 0.2 | 2026-10-13 | module-5 결정 반영: 마감일·우선순위 정렬 시 완료 항목은 뒤로, `backupBeforeImport`가 `Result` 반환(실패 시 가져오기 중단), 파일 크기 상수 `MAX_IMPORT_BYTES`는 domain으로 이동, 오류 코드 `IMPORT_BACKUP_FAILED` 추가 | biggsman |
 | 0.3 | 2026-10-13 | Check(분석 v0.1) 반영: §4.1 `getDueStatus` 위치(domain/date)·storage 보조 함수·`saveTodos`의 `STORAGE_UNAVAILABLE`·`parseImportFile`의 `IMPORT_TOO_LARGE`와 한국어 오류 위치(G8), `useUndo` 전체 시그니처 + `pause/resume`(새 5초, G1), §4.3 TodoContext 계약 신설, `loadTodos.backupSaved` + `STORAGE_CORRUPT_UNSAVED` + 손상 데이터 저장 규칙·corrupt-backup 비덮어쓰기(G3), schemaVersion 정책·마이그레이션 위치(G7), 태그 앞뒤 공백만 제거(G10), pre-import-backup 덮어쓰기·자동 삭제 없음(G11), theme 키 소유, useTodoView 파생·기본 마감일순, 추가 모듈 등록, §5.4 토글 그룹·필터 초기화·480px 접힘·토스트 규칙·대화상자 문구, 웹폰트 의존성 허용(G5), E2E 명령·포트·채널, main.tsx import 순서 예외(G9), 테스트 계획 #9·#15·L2 #11·L3 #7 | biggsman |
+| 0.4 | 2026-10-13 | 가져오기를 합치기로 변경(`mergeTodos`, `importTodos → Result<MergeSummary>`), 확인 대화상자 "새 할 일 N개를 추가하고, M개를 더 최신 내용으로 바꿉니다" / 버튼 "합치기", PWA·GitHub Pages 배포 | biggsman |

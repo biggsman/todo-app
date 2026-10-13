@@ -112,10 +112,10 @@ test.describe('§8.4 E2E', () => {
     await (await chooserPromise).setFiles(backupPath);
 
     const dialog = page.getByRole('dialog', { name: '데이터 가져오기' });
-    await expect(dialog).toContainText('현재 0개를 가져온 3개로 바꿉니다');
-    await dialog.getByRole('button', { name: '바꾸기' }).click();
+    await expect(dialog).toContainText('새 할 일 3개를 추가하고, 0개를 더 최신 내용으로 바꿉니다');
+    await dialog.getByRole('button', { name: '합치기' }).click();
 
-    await expect(page.getByText('3개를 가져왔습니다')).toBeVisible();
+    await expect(page.getByText('3개 추가, 0개 갱신했습니다')).toBeVisible();
     expect(await checkboxTitles(page)).toEqual(original);
     await expect(page.getByRole('checkbox', { name: '세 번째' })).toBeChecked();
     await page.reload();
@@ -331,4 +331,35 @@ test('PWA: manifest is served and the app opens offline after the first visit', 
   await expect(page.getByPlaceholder(PLACEHOLDER)).toBeVisible();
   await expect(todoList(page)).toContainText('오프라인 전에 추가');
   await context.setOffline(false);
+});
+
+// Import merges instead of replacing: todos added on two devices both survive.
+test('import merges a backup from another device into the current list', async ({
+  browser,
+}, testInfo) => {
+  const pc = await browser.newPage();
+  await pc.goto('/');
+  await addTodo(pc, { title: 'PC에서 추가' });
+  await pc.getByRole('button', { name: '데이터' }).click();
+  const downloadPromise = pc.waitForEvent('download');
+  await pc.getByRole('menuitem', { name: '내보내기' }).click();
+  const backupPath = testInfo.outputPath('pc-backup.json');
+  await (await downloadPromise).saveAs(backupPath);
+
+  const phone = await browser.newPage(); // separate context = separate localStorage
+  await phone.goto('/');
+  await addTodo(phone, { title: '휴대폰에서 추가' });
+  await phone.getByRole('button', { name: '데이터' }).click();
+  const chooserPromise = phone.waitForEvent('filechooser');
+  await phone.getByRole('menuitem', { name: '가져오기' }).click();
+  await (await chooserPromise).setFiles(backupPath);
+  await phone
+    .getByRole('dialog', { name: '데이터 가져오기' })
+    .getByRole('button', { name: '합치기' })
+    .click();
+
+  await expect(phone.getByText('1개 추가, 0개 갱신했습니다')).toBeVisible();
+  expect((await checkboxTitles(phone)).sort()).toEqual(['PC에서 추가', '휴대폰에서 추가'].sort());
+  await pc.close();
+  await phone.close();
 });
