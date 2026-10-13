@@ -1,25 +1,26 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-10-13T02:54:45.331Z",
+  "lastUpdated": "2026-10-13T03:25:20.956Z",
   "activeFeatures": [
     "todo-app"
   ],
   "primaryFeature": "todo-app",
   "features": {
     "todo-app": {
-      "phase": "act",
-      "phaseNumber": 5,
+      "phase": "completed",
+      "phaseNumber": 0,
       "matchRate": 99,
       "iterationCount": 2,
       "requirements": [],
       "documents": {
         "plan": "docs/01-plan/features/todo-app.plan.md",
         "design": "docs/02-design/features/todo-app.design.md",
-        "analysis": "docs/03-analysis/todo-app.analysis.md"
+        "analysis": "docs/03-analysis/todo-app.analysis.md",
+        "report": "docs/04-report/todo-app.report.md"
       },
       "timestamps": {
         "started": "2026-10-12T12:47:08.843Z",
-        "lastUpdated": "2026-10-13T02:54:45.327Z"
+        "lastUpdated": "2026-10-13T03:25:20.952Z"
       },
       "stateMachine": {
         "currentState": "plan",
@@ -48,7 +49,7 @@
   "session": {
     "startedAt": "2026-10-12T12:47:08.842Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-10-13T02:54:45.331Z"
+    "lastActivity": "2026-10-13T03:25:20.956Z"
   },
   "history": [
     {
@@ -79,6 +80,12 @@
       "timestamp": "2026-10-13T02:54:45.331Z",
       "feature": "todo-app",
       "phase": "act",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-10-13T03:25:20.956Z",
+      "feature": "todo-app",
+      "phase": "completed",
       "action": "updated"
     }
   ],
